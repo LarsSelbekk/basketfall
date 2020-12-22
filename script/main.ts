@@ -27,11 +27,11 @@ enum Direction {
 const WIDTH = 1280;
 const HEIGHT = 720;
 
-const GRAVITY = 0.000981/5;
-const JUMP_FORCE = 0.08/2;
+const GRAVITY = 0.000981 / 5;
+const JUMP_FORCE = 0.08 / 2;
 const TILT_FLUCTUATION_FORCE_MAX = 1e-12;
 const PLAYER_TILT_CONTROL_FORCE = 1e-6;
-const TICK_INTERVAL = 1000/600;
+const TICK_INTERVAL = 1000 / 600;
 
 const TITLE_WIDTH = 500;
 const TITLE_FONT = "Cambria";
@@ -44,7 +44,7 @@ const ctx = gameCanvas.getContext("2d");
 const renderables: Set<IRenderable> = new Set<IRenderable>();
 
 let player: Player;
-let stage: GameStage = GameStage.TitleScreen;
+let stage: GameStage;
 let leftOrRight: Direction = Direction.NONE;
 let leftDown: boolean = false;
 let rightDown: boolean = false;
@@ -81,20 +81,24 @@ class Player implements IRenderable, IForegroundComponent {
     }
 
     render(): void {
-        // TODO: Render rotated around center
         if (this.visible) {
-            const baselineCenterX = this.x + this.width/2;
-            const baselineCenterY = this.y + this.height;
-
+            // Save context state so we can return to it later
             ctx.save();
-            ctx.translate(baselineCenterX, baselineCenterY)
-            ctx.rotate(this.tilt);
-            ctx.translate(-baselineCenterX, -baselineCenterY);
 
-            ctx.drawImage(playerImage, this.x, this.y);
-            // ctx.rotate(-this.tilt);
+            // Change context perspective to draw sprite rotated around its center
+            // First center on the sprite's center
+            ctx.translate(this.x, this.y);
+            // Then rotate the perspective
+            ctx.rotate(this.tilt);
+            // Then we can draw the sprite (from its bottom left corner)
+            ctx.drawImage(playerImage, -this.width / 2, -this.height / 2);
+
+            // Restore the context state to exit the rotated and translated perspective
             ctx.restore();
-            // ctx.translate(-this.x/10, -this.y/10);
+
+            // Debug: show the sprite's center with a square
+            // ctx.fillStyle = "pink";
+            // ctx.fillRect(this.x-10, this.y-10, 20, 20);
         }
     }
 }
@@ -108,6 +112,14 @@ if (playerImage.complete) {
     init();
 } else {
     playerImage.addEventListener("load", init);
+}
+
+function boundingBoxBottomLeftX(centerX: number, width: number, height: number, tilt: number): number {
+    return centerX - (Math.abs(width * Math.cos(tilt) + height * Math.sin(tilt))) / 2;
+}
+
+function boundingBoxBottomLeftY(centerY: number, width: number, height: number, tilt: number): number {
+    return centerY + (Math.abs(height * Math.cos(tilt) + width * Math.sin(tilt))) / 2;
 }
 
 function updateDirection(): void {
@@ -128,7 +140,9 @@ function init(): void {
     gameCanvas.height = HEIGHT;
     gameCanvas.width = WIDTH;
 
-    player = new Player(WIDTH/2, 0);
+    player = new Player(WIDTH / 2, HEIGHT / 2);
+
+    openTitleScreen();
 
     gameCanvas.addEventListener("click", nextStage);
 
@@ -148,9 +162,9 @@ function init(): void {
         } else if (e.key === "ArrowRight") {
             rightDown = false;
         }
-        
+
         updateDirection();
-    })
+    });
 
 
     requestAnimationFrame(renderWrapper);
@@ -246,37 +260,39 @@ function renderDeathScreen(): void {
 
 function tick(): void {
     player.forceAngle = Math.random() * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE;
-    player.forceAngle -= Math.sign(player.speedAngle) * player.speedAngle**2 * player.airResistanceAngle;
+    player.forceAngle -= Math.sign(player.speedAngle) * player.speedAngle ** 2 * player.airResistanceAngle;
     player.accelerationAngle = player.weight * player.forceAngle;
     player.speedAngle += player.accelerationAngle;
     player.tilt += player.speedAngle;
-    player.tilt %= 2*Math.PI;
+    player.tilt %= 2 * Math.PI;
 
     player.forceX = 0;
     player.forceY = GRAVITY;
-    if (player.y >= HEIGHT - player.height) {
-        if (player.speedY > 0) {
-            player.speedY = 0;
+
+    if (boundingBoxBottomLeftY(player.y, player.width, player.height, player.tilt) > HEIGHT) {
+        if (Math.abs(player.tilt) >= Math.PI / 2) {
+            die();
+        } else {
+            if (player.speedY > 0) {
+                player.speedY = 0;
+            }
+            player.forceY = -JUMP_FORCE * Math.cos(player.tilt);
+            player.forceX = JUMP_FORCE * Math.sin(player.tilt);
         }
-        player.forceY = -JUMP_FORCE * Math.cos(player.tilt);
-        player.forceX = JUMP_FORCE * Math.sin(player.tilt);
     }
 
     // player.forceX = 0;
-    player.forceX -= Math.sign(player.speedX) * player.speedX**2 * player.airResistanceX;
+    player.forceX -= Math.sign(player.speedX) * player.speedX ** 2 * player.airResistanceX;
     player.accelerationX = player.forceX * player.weight;
     player.speedX += player.accelerationX;
     player.x += player.speedX;
 
 
-    player.forceY -= Math.sign(player.speedY) * player.speedY**2 * player.airResistanceY;
+    player.forceY -= Math.sign(player.speedY) * player.speedY ** 2 * player.airResistanceY;
     player.accelerationY = player.forceY * player.weight;
     player.speedY += player.accelerationY;
     // player.speedY = 0;
     player.y += player.speedY;
 
-    if (player.y + player.height * (1 - Math.cos(player.tilt)) > HEIGHT) {
-        die();
-    }
 
 }
