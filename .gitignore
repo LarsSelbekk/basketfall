@@ -1,0 +1,23 @@
+bin/
+target/
+
+# IntelliJ
+.idea/
+*.iml
+
+# VSCode
+.vscode/
+.settings/
+.classpath
+.project
+
+# GitPod
+.theia/
+
+# Node
+/node_modules/
+/package-lock.json
+
+# TypeScript compilation artifacts
+/script/*.js
+/script/*.map
