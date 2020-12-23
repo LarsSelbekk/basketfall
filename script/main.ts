@@ -294,13 +294,12 @@ class Ball extends PhysicsObject implements IRenderable, ITickable {
         this.attachedPlayer = player;
         player.attachedBall = this;
         this.tick();
-        // removeRenderable(this);
     }
 
-    unAttach(): void {
-        // registerRenderable(this);
-        this.speedX = this.attachedPlayer.speedX;
-        this.speedY = this.attachedPlayer.speedY;
+    detach(): void {
+        const arm = Math.sqrt((this.x - this.attachedPlayer.x)**2 + (this.y - this.attachedPlayer.y)**2);
+        this.speedX = this.attachedPlayer.speedX + this.attachedPlayer.speedAngle * arm * Math.cos(this.attachedPlayer.tilt);
+        this.speedY = this.attachedPlayer.speedY + this.attachedPlayer.speedAngle * arm * Math.sin(this.attachedPlayer.tilt);
 
         if (basket !== undefined && basket !== null && ballInBasket(this, basket)) {
             this.speedX = 0;
@@ -558,7 +557,7 @@ function init(): void {
         if (e.key === " ") {
             if (player.attachedBall !== null) {
                 const ball = player.attachedBall;
-                player.attachedBall.unAttach();
+                player.attachedBall.detach();
 
                 ball.clearLinearForces();
                 ball.addForce({magnitude: JUMP_FORCE*5, angle: player.tilt});
@@ -574,7 +573,7 @@ function init(): void {
             e.preventDefault();
         } else if (e.key === "e" || e.key === "E") {
             if (player.attachedBall !== null) {
-                player.attachedBall.unAttach();
+                player.attachedBall.detach();
             }
             e.preventDefault();
         }
