@@ -41,12 +41,16 @@ const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
 const video_trynings_bak = document.getElementById("video_trynings_bak") as HTMLVideoElement;
 const playerImage = document.createElement("img");
 const hoopImage = document.createElement("img");
+const ballImage = document.createElement("img");
+const basketImage = document.createElement("img");
 
 const ctx = gameCanvas.getContext("2d");
 const renderables: IRenderable[] = [];
+const balls: Ball[] = [];
 
 let player: Player;
 let hoop: Hoop;
+let basket: Basket;
 let stage: GameStage;
 let leftOrRight: Direction = Direction.NONE;
 let leftDown: boolean = false;
@@ -132,6 +136,51 @@ class Player implements IRenderable, ICenteredRotatableComponent {
     }
 }
 
+class Ball implements IRenderable {
+    visible: boolean;
+    x: number;
+    y: number;
+    z: number;
+    attachedPlayer: Player = null;
+    width: number = ballImage.width;
+    height: number = ballImage.height;
+
+    attach(player: Player) {
+        this.attachedPlayer = player;
+        // removeRenderable(this);
+    }
+
+    unAttach(): void {
+        // registerRenderable(this);
+        this.attachedPlayer = null;
+    }
+
+    constructor(x: number, y: number, z: number = -2) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        registerRenderable(this);
+        balls.push(this);
+    }
+
+    render(): void {
+        if (this.visible) {
+            ctx.save();
+            ctx.translate(this.x,this.y);
+            if (this.attachedPlayer !== null) {
+                ctx.rotate(this.attachedPlayer.tilt);
+            }
+            ctx.drawImage(ballImage, 0, 0);
+            ctx.restore();
+
+            // Debug: show the sprite's center with a square
+            ctx.fillStyle = "pink";
+            ctx.fillRect(this.x + this.width / 2 - 10, this.y + this.height / 2 - 10, 20, 20);
+        }
+    }
+
+}
+
 class Hoop implements IRenderable {
     visible: boolean = false;
     x: number;
@@ -140,7 +189,7 @@ class Hoop implements IRenderable {
     readonly width: number = hoopImage.width;
     readonly height: number = hoopImage.height;
 
-    constructor(x: number, y: number, z: number = -1) {
+    constructor(x: number, y: number, z: number = -2) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -154,21 +203,47 @@ class Hoop implements IRenderable {
     }
 }
 
+class Basket implements IRenderable {
+    visible: boolean = false;
+    x: number;
+    y: number;
+    z: number;
+    readonly width: number = basketImage.width;
+    readonly height: number = basketImage.height;
+
+    constructor(x: number, y: number, z: number = -1) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        registerRenderable(this);
+    }
+
+    render(): void {
+        if (this.visible) {
+            ctx.drawImage(basketImage, this.x, this.y);
+        }
+    }
+}
+
 type RenderFunction = () => void;
 
 let renderFunction: RenderFunction = renderTitleScreen;
 
 playerImage.src = "../img/player.png";
-
 hoopImage.src = "../img/hoop.png";
+ballImage.src = "../img/ball.png";
+basketImage.src = "../img/basket.png";
+
+const images: HTMLImageElement[] = [playerImage, hoopImage, ballImage, basketImage];
+
 function tryInit(): void {
-    if (!playerImage.complete) {
-        playerImage.addEventListener("load", tryInit);
-    } else if (!hoopImage.complete) {
-        hoopImage.addEventListener("load", tryInit);
-    } else {
-        init();
+    for (const image of images) {
+        if (!image.complete) {
+            image.addEventListener("load", tryInit);
+            return;
+        }
     }
+    init();
 }
 
 tryInit();
@@ -228,7 +303,9 @@ function init(): void {
     gameCanvas.width = WIDTH;
 
     player = new Player(WIDTH / 2, HEIGHT / 2);
+    new Ball(0, 0).attach(player);
     hoop = new Hoop(40, 10);
+    basket = new Basket(hoop.x, hoop.y - hoop.height + basketImage.height);
 
     openTitleScreen();
 
@@ -252,6 +329,16 @@ function init(): void {
         }
 
         updateDirection();
+    });
+
+    document.addEventListener("keypress", e => {
+        if (e.key === " ") {
+            balls[0].unAttach();
+            // e.stopPropagation();
+            // e.stopImmediatePropagation();
+            e.preventDefault();
+            // return false;
+        }
     });
 
 
@@ -310,6 +397,10 @@ function startGame(): void {
     stage = GameStage.Game;
     player.visible = true;
     hoop.visible = true;
+    basket.visible = true;
+    for (const ball of balls) {
+        ball.visible = true;
+    }
     ticker = window.setInterval(tick, TICK_INTERVAL);
 
 }
@@ -383,5 +474,11 @@ function tick(): void {
     // player.speedY = 0;
     player.y += player.speedY;
 
-
+    for (const ball of balls) {
+        const attached = ball.attachedPlayer;
+        if (attached !== null) {
+            ball.x = topLeftCornerX(attached);
+            ball.y = topLeftCornerY(attached);
+        }
+    }
 }
