@@ -29,7 +29,7 @@ const HEIGHT = 720;
 
 const GRAVITY = 0.000981 / 5;
 const JUMP_FORCE = 0.08 / 2;
-const TILT_FLUCTUATION_FORCE_MAX = 1e-12;
+const TILT_FLUCTUATION_FORCE_MAX = 1e-6;
 const PLAYER_TILT_CONTROL_FORCE = 1e-6;
 const TICK_INTERVAL = 1000 / 600;
 
@@ -259,7 +259,7 @@ function renderDeathScreen(): void {
 }
 
 function tick(): void {
-    player.forceAngle = Math.random() * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE;
+    player.forceAngle = (Math.random() - 0.5) * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE;
     player.forceAngle -= Math.sign(player.speedAngle) * player.speedAngle ** 2 * player.airResistanceAngle;
     player.accelerationAngle = player.weight * player.forceAngle;
     player.speedAngle += player.accelerationAngle;
