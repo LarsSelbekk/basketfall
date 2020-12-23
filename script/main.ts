@@ -5,6 +5,14 @@ interface IRenderable {
     render(): void;
 }
 
+interface ICenteredRotatableComponent {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    tilt: number;
+}
+
 enum GameStage {
     TitleScreen,
     Game,
@@ -45,7 +53,15 @@ let leftDown: boolean = false;
 let rightDown: boolean = false;
 let ticker: number;
 
-class Player implements IRenderable {
+function removeRenderable(renderable: IRenderable): void {
+    const index = renderables.indexOf(renderable);
+    if (index >= 0) {
+        renderables.splice(index, 1);
+    }
+    renderables.sort((a, b) => a.z - b.z);
+}
+
+class Player implements IRenderable, ICenteredRotatableComponent {
     readonly width: number = playerImage.width;
     readonly height: number = playerImage.height;
     readonly weight: number;
@@ -85,15 +101,33 @@ class Player implements IRenderable {
             ctx.translate(this.x, this.y);
             // Then rotate the perspective
             ctx.rotate(this.tilt);
-            // Then we can draw the sprite (from its bottom left corner)
+            // Then we can draw the sprite (from its top left corner)
             ctx.drawImage(playerImage, -this.width / 2, -this.height / 2);
 
             // Restore the context state to exit the rotated and translated perspective
             ctx.restore();
 
             // Debug: show the sprite's center with a square
-            // ctx.fillStyle = "pink";
-            // ctx.fillRect(this.x-10, this.y-10, 20, 20);
+            ctx.fillStyle = "pink";
+            ctx.fillRect(this.x - 10, this.y - 10, 20, 20);
+
+            const bottomLeftX = bottomLeftCornerX(this);
+            const bottomLeftY = bottomLeftCornerY(this);
+            const bottomRightX = bottomRightCornerX(this);
+            const bottomRightY = bottomRightCornerY(this);
+            const topRightX = topRightCornerX(this);
+            const topRightY = topRightCornerY(this);
+            const topLeftX = topLeftCornerX(this);
+            const topLeftY = topLeftCornerY(this);
+
+            ctx.fillStyle = "red";
+            ctx.fillRect(bottomLeftX - 10, bottomLeftY - 10, 20, 20);
+            ctx.fillStyle = "orange";
+            ctx.fillRect(bottomRightX - 10, bottomRightY - 10, 20, 20);
+            ctx.fillStyle = "yellow";
+            ctx.fillRect(topRightX - 10, topRightY - 10, 20, 20);
+            ctx.fillStyle = "brown";
+            ctx.fillRect(topLeftX - 10, topLeftY - 10, 20, 20);
         }
     }
 }
@@ -139,12 +173,40 @@ function tryInit(): void {
 
 tryInit();
 
-function boundingBoxBottomLeftX(centerX: number, width: number, height: number, tilt: number): number {
-    return centerX - (Math.abs(width * Math.cos(tilt) + height * Math.sin(tilt))) / 2;
+function bottomLeftCornerX(b: ICenteredRotatableComponent): number {
+    return b.x - (b.width * Math.cos(b.tilt) + b.height * Math.sin(b.tilt)) / 2;
 }
 
-function boundingBoxBottomLeftY(centerY: number, width: number, height: number, tilt: number): number {
-    return centerY + (Math.abs(height * Math.cos(tilt) + width * Math.sin(tilt))) / 2;
+function topLeftCornerX(b: ICenteredRotatableComponent): number {
+    return 2 * b.x - bottomRightCornerX(b);
+}
+
+function topRightCornerX(b: ICenteredRotatableComponent): number {
+    return 2 * b.x - bottomLeftCornerX(b);
+}
+
+function bottomRightCornerX(b: ICenteredRotatableComponent): number {
+    return b.x - Math.sin(b.tilt - Math.atan(b.width / b.height)) * Math.sqrt(b.height ** 2 + b.width ** 2) / 2;
+}
+
+function bottomLeftCornerY(b: ICenteredRotatableComponent): number {
+    return b.y + Math.cos(b.tilt + Math.atan(b.width / b.height)) * Math.sqrt(b.height ** 2 + b.width ** 2) / 2;
+}
+
+function topLeftCornerY(b: ICenteredRotatableComponent): number {
+    return 2 * b.y - bottomRightCornerY(b);
+}
+
+function topRightCornerY(b: ICenteredRotatableComponent): number {
+    return 2 * b.y - bottomLeftCornerY(b);
+}
+
+function bottomRightCornerY(b: ICenteredRotatableComponent): number {
+    return b.y + Math.sqrt(b.height ** 2 + b.width ** 2) * Math.cos(b.tilt - Math.atan(b.width/b.height)) / 2;
+}
+
+function boundingBoxBottomY(b: ICenteredRotatableComponent): number {
+    return Math.max(bottomLeftCornerY(b), bottomRightCornerY(b), topRightCornerY(b), topLeftCornerY(b));
 }
 
 function updateDirection(): void {
@@ -195,12 +257,11 @@ function init(): void {
 
     requestAnimationFrame(renderWrapper);
 
-    // window.setTimeout(die, 1000);
 }
 
 function registerRenderable(target: IRenderable): void {
     renderables.push(target);
-    renderables.sort((a,b) => a.z - b.z);
+    renderables.sort((a, b) => a.z - b.z);
 }
 
 function nextStage(): void {
@@ -269,9 +330,6 @@ function renderTitleScreen(): void {
     ctx.fillStyle = "black";
 
     ctx.fillText(title, WIDTH / 2, 500, TITLE_WIDTH);
-
-    // die();
-
 }
 
 function renderDeathScreen(): void {
@@ -301,7 +359,7 @@ function tick(): void {
     player.forceX = 0;
     player.forceY = GRAVITY;
 
-    if (boundingBoxBottomLeftY(player.y, player.width, player.height, player.tilt) > HEIGHT) {
+    if (boundingBoxBottomY(player) > HEIGHT) {
         if (Math.abs(player.tilt) >= Math.PI / 2) {
             die();
         } else {
@@ -313,7 +371,6 @@ function tick(): void {
         }
     }
 
-    // player.forceX = 0;
     player.forceX -= Math.sign(player.speedX) * player.speedX ** 2 * player.airResistanceX;
     player.accelerationX = player.forceX * player.weight;
     player.speedX += player.accelerationX;
