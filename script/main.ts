@@ -4,14 +4,6 @@ interface IRenderable {
     render(): void;
 }
 
-interface IForegroundComponent {
-    x: number;
-    y: number;
-    z: number;
-    width: number;
-    height: number;
-}
-
 enum GameStage {
     TitleScreen,
     Game,
@@ -50,7 +42,7 @@ let leftDown: boolean = false;
 let rightDown: boolean = false;
 let ticker: number;
 
-class Player implements IRenderable, IForegroundComponent {
+class Player implements IRenderable {
     readonly width: number = playerImage.width;
     readonly height: number = playerImage.height;
     readonly weight: number;
