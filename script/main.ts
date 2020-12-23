@@ -610,13 +610,15 @@ function renderWrapper() {
             break;
         case GameStage.Game:
             renderGame();
+            renderSprites();
+            renderGameOverlay();
             break;
         case GameStage.TitleScreen:
             renderTitleScreen();
             break;
     }
 
-    renderables.forEach(r => r.render());
+
     requestAnimationFrame(renderWrapper);
 }
 
@@ -636,9 +638,17 @@ function startGame(): void {
 
 }
 
-function renderGame() {
+function renderGame(): void {
     ctx.fillStyle = "gray";
     ctx.fillRect(0, 0, WIDTH - 1, HEIGHT - 1);
+}
+
+function renderGameOverlay(): void {
+    ctx.fillStyle = "black";
+    ctx.font = "30px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("🏀" + goals, WIDTH/2, 15, 100);
 }
 
 function renderTitleScreen(): void {
@@ -649,6 +659,7 @@ function renderTitleScreen(): void {
 
     ctx.font = TITLE_WIDTH + "px " + TITLE_FONT;
     ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
     ctx.fillStyle = "black";
 
     ctx.fillText(title, WIDTH / 2, 500, TITLE_WIDTH);
@@ -664,10 +675,15 @@ function renderDeathScreen(): void {
         HEIGHT / 2 - video_trynings_bak.videoHeight / 2);
     ctx.font = TITLE_WIDTH + "px " + TITLE_FONT;
     ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
     ctx.fillStyle = "red";
     ctx.fillText("TOT", WIDTH / 2, 500, TITLE_WIDTH);
 
     renderables.forEach(r => r.visible = false);
+}
+
+function renderSprites(): void {
+    renderables.forEach(r => r.render());
 }
 
 function tick(): void {
