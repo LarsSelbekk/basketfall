@@ -1,5 +1,6 @@
 interface IRenderable {
     visible: boolean;
+    z: number;
 
     render(): void;
 }
@@ -31,11 +32,13 @@ const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
 
 const video_trynings_bak = document.getElementById("video_trynings_bak") as HTMLVideoElement;
 const playerImage = document.createElement("img");
+const hoopImage = document.createElement("img");
 
 const ctx = gameCanvas.getContext("2d");
-const renderables: Set<IRenderable> = new Set<IRenderable>();
+const renderables: IRenderable[] = [];
 
 let player: Player;
+let hoop: Hoop;
 let stage: GameStage;
 let leftOrRight: Direction = Direction.NONE;
 let leftDown: boolean = false;
@@ -69,7 +72,7 @@ class Player implements IRenderable {
         this.y = y;
         this.z = z;
         this.weight = weight;
-        renderables.add(this);
+        registerRenderable(this);
     }
 
     render(): void {
@@ -95,16 +98,46 @@ class Player implements IRenderable {
     }
 }
 
+class Hoop implements IRenderable {
+    visible: boolean = false;
+    x: number;
+    y: number;
+    z: number;
+    readonly width: number = hoopImage.width;
+    readonly height: number = hoopImage.height;
+
+    constructor(x: number, y: number, z: number = -1) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        registerRenderable(this);
+    }
+
+    render(): void {
+        if (this.visible) {
+            ctx.drawImage(hoopImage, this.x, this.y);
+        }
+    }
+}
+
 type RenderFunction = () => void;
 
 let renderFunction: RenderFunction = renderTitleScreen;
 
 playerImage.src = "../img/player.png";
-if (playerImage.complete) {
-    init();
-} else {
-    playerImage.addEventListener("load", init);
+
+hoopImage.src = "../img/hoop.png";
+function tryInit(): void {
+    if (!playerImage.complete) {
+        playerImage.addEventListener("load", tryInit);
+    } else if (!hoopImage.complete) {
+        hoopImage.addEventListener("load", tryInit);
+    } else {
+        init();
+    }
 }
+
+tryInit();
 
 function boundingBoxBottomLeftX(centerX: number, width: number, height: number, tilt: number): number {
     return centerX - (Math.abs(width * Math.cos(tilt) + height * Math.sin(tilt))) / 2;
@@ -133,6 +166,7 @@ function init(): void {
     gameCanvas.width = WIDTH;
 
     player = new Player(WIDTH / 2, HEIGHT / 2);
+    hoop = new Hoop(40, 10);
 
     openTitleScreen();
 
@@ -162,6 +196,11 @@ function init(): void {
     requestAnimationFrame(renderWrapper);
 
     // window.setTimeout(die, 1000);
+}
+
+function registerRenderable(target: IRenderable): void {
+    renderables.push(target);
+    renderables.sort((a,b) => a.z - b.z);
 }
 
 function nextStage(): void {
@@ -209,6 +248,7 @@ function openTitleScreen(): void {
 function startGame(): void {
     stage = GameStage.Game;
     player.visible = true;
+    hoop.visible = true;
     ticker = window.setInterval(tick, TICK_INTERVAL);
 
 }
