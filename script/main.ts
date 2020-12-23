@@ -239,8 +239,6 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
                 this.computeForceY();
                 this.addForce({magnitude: -this.forceY, angle: 0});
                 this.addForce({magnitude: JUMP_FORCE * Math.abs(Math.cos(this.tilt)), angle: this.tilt});
-                // this.forceY = -JUMP_FORCE * Math.cos(this.tilt);
-                // this.forceX = JUMP_FORCE * Math.sin(this.tilt);
             }
         }
 
@@ -340,14 +338,6 @@ class Ball extends PhysicsObject implements IRenderable, ITickable {
             this.clearLinearForces();
 
             if (this.y + this.height > HEIGHT) {
-                //     if (this.speedY > 0) {
-                //         this.speedY = 0;
-                //     }
-                //     this.computeForceY();
-                //     this.addForce({magnitude: -this.forceY, angle: 0});
-                //     this.addForce({magnitude: JUMP_FORCE, angle: this.tilt});
-                // this.forceY = -JUMP_FORCE * Math.cos(this.tilt);
-                // this.forceX = JUMP_FORCE * Math.sin(this.tilt);
                 balls.splice(balls.indexOf(this), 1);
                 removeRenderable(this);
                 const ball = new Ball(0, 0);
@@ -407,10 +397,6 @@ class Ball extends PhysicsObject implements IRenderable, ITickable {
 
 function ballInBasket(ball: Ball, basket: Basket): boolean {
     const topHorizontalOff = 3;
-    // return basket.x < ball.x &&
-    //     ball.x < basket.x + basket.width &&
-    //     basket.y < ball.y &&
-    //     ball.y < basket.y + basket.height;
     return ball.x > basket.x + topHorizontalOff + (ball.y - basket.y) * (basket.width - topHorizontalOff * 2) / (2 * basket.height) &&
         ball.x < basket.x - topHorizontalOff + basket.width / 2 + (ball.y - basket.y) * (basket.width - topHorizontalOff * 2) / (2 * basket.height) &&
         ball.y < basket.y + basket.height &&
@@ -544,12 +530,14 @@ function init(): void {
     });
 
     document.addEventListener("keydown", e => {
-        if (stage === GameStage.TitleScreen) {
-            startGame();
-            e.preventDefault();
-        } else if (stage === GameStage.DeathScreen) {
-            reset();
-            e.preventDefault();
+        if (e.key === "Enter") {
+            if (stage === GameStage.TitleScreen) {
+                startGame();
+                e.preventDefault();
+            } else if (stage === GameStage.DeathScreen) {
+                reset();
+                e.preventDefault();
+            }
         } else {
             if (e.key === "ArrowLeft") {
                 leftDown = true;
@@ -706,9 +694,22 @@ function renderTitleScreen(): void {
     ctx.font = TITLE_WIDTH + "px " + TITLE_FONT;
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "black";
+    ctx.fillStyle = "#101010";
 
     ctx.fillText(title, WIDTH / 2, 500, TITLE_WIDTH);
+    ctx.fillStyle = "#00000066";
+    ctx.fillRect(WIDTH / 3 - WIDTH / 10, 600 - 55, WIDTH / 3 + WIDTH / 5, 130);
+    ctx.fillStyle = "#dddddd";
+    ctx.font = "60px monospace";
+    ctx.fillText("🎮", WIDTH / 2, 600, WIDTH / 2);
+    ctx.font = "40px monospace";
+    ctx.fillText("[🌌]:🤾", WIDTH / 2, 650, TITLE_WIDTH);
+    ctx.textAlign = "right";
+    ctx.fillText("[◀]: ↪", 2 * WIDTH / 5, 600, WIDTH / 3);
+    ctx.fillText("[E]:⚓", 2 * WIDTH / 5, 650, WIDTH / 3);
+    ctx.textAlign = "left";
+    ctx.fillText("[▶]: ↩", 3 * WIDTH / 5, 600, WIDTH / 3);
+    ctx.fillText("[B]: 🗺", 3 * WIDTH / 5, 650, WIDTH / 3);
 }
 
 function renderDeathScreen(): void {
