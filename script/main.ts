@@ -535,8 +535,10 @@ function init(): void {
     document.addEventListener("keydown", e => {
         if (e.key === "ArrowLeft") {
             leftDown = true;
+            e.preventDefault();
         } else if (e.key === "ArrowRight") {
             rightDown = true;
+            e.preventDefault();
         }
 
         updateDirection();
