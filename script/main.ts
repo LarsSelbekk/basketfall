@@ -13,6 +13,10 @@ interface ICenteredRotatableComponent {
     tilt: number;
 }
 
+interface ITickable {
+    tick(): void;
+}
+
 enum GameStage {
     TitleScreen,
     Game,
@@ -65,7 +69,7 @@ function removeRenderable(renderable: IRenderable): void {
     renderables.sort((a, b) => a.z - b.z);
 }
 
-class Player implements IRenderable, ICenteredRotatableComponent {
+class Player implements IRenderable, ICenteredRotatableComponent, ITickable {
     readonly width: number = playerImage.width;
     readonly height: number = playerImage.height;
     readonly weight: number;
@@ -93,6 +97,42 @@ class Player implements IRenderable, ICenteredRotatableComponent {
         this.z = z;
         this.weight = weight;
         registerRenderable(this);
+    }
+
+    tick(): void {
+        this.forceAngle = (Math.random() - 0.5) * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE;
+        this.forceAngle -= Math.sign(this.speedAngle) * this.speedAngle ** 2 * this.airResistanceAngle;
+        this.accelerationAngle = this.weight * this.forceAngle;
+        this.speedAngle += this.accelerationAngle;
+        this.tilt += this.speedAngle;
+        this.tilt %= 2 * Math.PI;
+
+        this.forceX = 0;
+        this.forceY = GRAVITY;
+
+        if (boundingBoxBottomY(this) > HEIGHT) {
+            if (Math.abs(this.tilt) >= Math.PI / 2) {
+                die();
+            } else {
+                if (this.speedY > 0) {
+                    this.speedY = 0;
+                }
+                this.forceY = -JUMP_FORCE * Math.cos(this.tilt);
+                this.forceX = JUMP_FORCE * Math.sin(this.tilt);
+            }
+        }
+
+        this.forceX -= Math.sign(this.speedX) * this.speedX ** 2 * this.airResistanceX;
+        this.accelerationX = this.forceX * this.weight;
+        this.speedX += this.accelerationX;
+        this.x += this.speedX;
+
+
+        this.forceY -= Math.sign(this.speedY) * this.speedY ** 2 * this.airResistanceY;
+        this.accelerationY = this.forceY * this.weight;
+        this.speedY += this.accelerationY;
+        // this.speedY = 0;
+        this.y += this.speedY;
     }
 
     render(): void {
@@ -136,7 +176,7 @@ class Player implements IRenderable, ICenteredRotatableComponent {
     }
 }
 
-class Ball implements IRenderable {
+class Ball implements IRenderable, ITickable {
     visible: boolean;
     x: number;
     y: number;
@@ -161,6 +201,13 @@ class Ball implements IRenderable {
         this.z = z;
         registerRenderable(this);
         balls.push(this);
+    }
+
+    tick(): void {
+        if (this.attachedPlayer !== null) {
+            this.x = topLeftCornerX(this.attachedPlayer);
+            this.y = topLeftCornerY(this.attachedPlayer);
+        }
     }
 
     render(): void {
@@ -189,7 +236,7 @@ class Hoop implements IRenderable {
     readonly width: number = hoopImage.width;
     readonly height: number = hoopImage.height;
 
-    constructor(x: number, y: number, z: number = -2) {
+    constructor(x: number, y: number, z: number = -3) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -440,45 +487,8 @@ function renderDeathScreen(): void {
 }
 
 function tick(): void {
-    player.forceAngle = (Math.random() - 0.5) * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE;
-    player.forceAngle -= Math.sign(player.speedAngle) * player.speedAngle ** 2 * player.airResistanceAngle;
-    player.accelerationAngle = player.weight * player.forceAngle;
-    player.speedAngle += player.accelerationAngle;
-    player.tilt += player.speedAngle;
-    player.tilt %= 2 * Math.PI;
-
-    player.forceX = 0;
-    player.forceY = GRAVITY;
-
-    if (boundingBoxBottomY(player) > HEIGHT) {
-        if (Math.abs(player.tilt) >= Math.PI / 2) {
-            die();
-        } else {
-            if (player.speedY > 0) {
-                player.speedY = 0;
-            }
-            player.forceY = -JUMP_FORCE * Math.cos(player.tilt);
-            player.forceX = JUMP_FORCE * Math.sin(player.tilt);
-        }
-    }
-
-    player.forceX -= Math.sign(player.speedX) * player.speedX ** 2 * player.airResistanceX;
-    player.accelerationX = player.forceX * player.weight;
-    player.speedX += player.accelerationX;
-    player.x += player.speedX;
-
-
-    player.forceY -= Math.sign(player.speedY) * player.speedY ** 2 * player.airResistanceY;
-    player.accelerationY = player.forceY * player.weight;
-    player.speedY += player.accelerationY;
-    // player.speedY = 0;
-    player.y += player.speedY;
-
+    player.tick();
     for (const ball of balls) {
-        const attached = ball.attachedPlayer;
-        if (attached !== null) {
-            ball.x = topLeftCornerX(attached);
-            ball.y = topLeftCornerY(attached);
-        }
+        ball.tick();
     }
 }
