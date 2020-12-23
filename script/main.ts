@@ -151,7 +151,6 @@ const HEIGHT = 720;
 
 const GRAVITY = 0.00981 * 2.5;
 const JUMP_FORCE = 0.08 / 2;
-const BOUNCE_FACTOR = 0.9;
 const TILT_FLUCTUATION_FORCE_MAX = 1e-6;
 const PLAYER_TILT_CONTROL_FORCE = 1e-6;
 const TICK_INTERVAL = 1000 / 600;
@@ -164,7 +163,24 @@ const playerImage = document.createElement("img");
 const hoopImage = document.createElement("img");
 const ballImage = document.createElement("img");
 const basketImage = document.createElement("img");
+const titleBGImage = document.createElement("img");
 const tryningsVideo = document.createElement("video");
+
+const bgImages: HTMLImageElement[] =
+    [
+        "img/bg_dovre_small.jpg",
+        "img/bg_dovre2_small.jpg",
+        "img/bg_galdhopiggen_small.jpg",
+        "img/bg_oy_small.jpg",
+        "img/bg_rosa_small.jpg",
+        "img/bg_skog_small.jpg",
+        "img/bg_strand_small.jpg",
+    ]
+        .map(x => {
+            const img = document.createElement("img");
+            img.src = x;
+            return img;
+        });
 
 const ctx = gameCanvas.getContext("2d");
 const renderables: IRenderable[] = [];
@@ -179,6 +195,7 @@ let leftOrRight: Direction = Direction.NONE;
 let leftDown: boolean = false;
 let rightDown: boolean = false;
 let ticker: number;
+let currentBackgroundIndex: number = 0;
 
 function removeRenderable(renderable: IRenderable): void {
     const index = renderables.indexOf(renderable);
@@ -210,18 +227,18 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
         this.computeTilt();
 
         this.clearLinearForces();
-        this.addForce({magnitude: GRAVITY/this.weight, angle: Math.PI});
+        this.addForce({magnitude: GRAVITY / this.weight, angle: Math.PI});
 
         if (boundingBoxBottomY(this) > HEIGHT) {
             if (Math.abs(this.tilt) >= Math.PI / 2) {
                 die();
-            } else if (bottomRightCornerY(this) > HEIGHT){
+            } else if (bottomRightCornerY(this) > HEIGHT) {
                 if (this.speedY > 0) {
                     this.speedY = 0;
                 }
                 this.computeForceY();
                 this.addForce({magnitude: -this.forceY, angle: 0});
-                this.addForce({magnitude: JUMP_FORCE*Math.abs(Math.cos(this.tilt)), angle: this.tilt});
+                this.addForce({magnitude: JUMP_FORCE * Math.abs(Math.cos(this.tilt)), angle: this.tilt});
                 // this.forceY = -JUMP_FORCE * Math.cos(this.tilt);
                 // this.forceX = JUMP_FORCE * Math.sin(this.tilt);
             }
@@ -297,7 +314,7 @@ class Ball extends PhysicsObject implements IRenderable, ITickable {
     }
 
     detach(): void {
-        const arm = Math.sqrt((this.x - this.attachedPlayer.x)**2 + (this.y - this.attachedPlayer.y)**2);
+        const arm = Math.sqrt((this.x - this.attachedPlayer.x) ** 2 + (this.y - this.attachedPlayer.y) ** 2);
         this.speedX = this.attachedPlayer.speedX + this.attachedPlayer.speedAngle * arm * Math.cos(this.attachedPlayer.tilt);
         this.speedY = this.attachedPlayer.speedY + this.attachedPlayer.speedAngle * arm * Math.sin(this.attachedPlayer.tilt);
 
@@ -323,32 +340,33 @@ class Ball extends PhysicsObject implements IRenderable, ITickable {
             this.clearLinearForces();
 
             if (this.y + this.height > HEIGHT) {
-            //     if (this.speedY > 0) {
-            //         this.speedY = 0;
-            //     }
-            //     this.computeForceY();
-            //     this.addForce({magnitude: -this.forceY, angle: 0});
-            //     this.addForce({magnitude: JUMP_FORCE, angle: this.tilt});
+                //     if (this.speedY > 0) {
+                //         this.speedY = 0;
+                //     }
+                //     this.computeForceY();
+                //     this.addForce({magnitude: -this.forceY, angle: 0});
+                //     this.addForce({magnitude: JUMP_FORCE, angle: this.tilt});
                 // this.forceY = -JUMP_FORCE * Math.cos(this.tilt);
                 // this.forceX = JUMP_FORCE * Math.sin(this.tilt);
-                balls.splice(balls.indexOf(this));
+                balls.splice(balls.indexOf(this), 1);
                 removeRenderable(this);
-                new Ball(0,0).attach(player);
-                balls[0].visible = true;
+                const ball = new Ball(0, 0);
+                ball.attach(player);
+                ball.visible = true;
             }
 
             if (ballInBasket(this, basket)) {
                 this.speedX = 0;
                 if (!this.contacting) {
                     this.speedY = 0;
-                    console.log(++goals);
+                    goals++;
                 }
                 this.contacting = true;
 
             } else {
                 this.contacting = false;
             }
-            this.addForce({magnitude: GRAVITY/this.weight, angle: Math.PI});
+            this.addForce({magnitude: GRAVITY / this.weight, angle: Math.PI});
 
 
             this.addForce({
@@ -393,8 +411,8 @@ function ballInBasket(ball: Ball, basket: Basket): boolean {
     //     ball.x < basket.x + basket.width &&
     //     basket.y < ball.y &&
     //     ball.y < basket.y + basket.height;
-    return ball.x > basket.x + topHorizontalOff + (ball.y-basket.y)*(basket.width - topHorizontalOff * 2) / (2 * basket.height) &&
-        ball.x < basket.x  - topHorizontalOff + basket.width/2 + (ball.y-basket.y)*(basket.width - topHorizontalOff * 2) / (2*basket.height) &&
+    return ball.x > basket.x + topHorizontalOff + (ball.y - basket.y) * (basket.width - topHorizontalOff * 2) / (2 * basket.height) &&
+        ball.x < basket.x - topHorizontalOff + basket.width / 2 + (ball.y - basket.y) * (basket.width - topHorizontalOff * 2) / (2 * basket.height) &&
         ball.y < basket.y + basket.height &&
         ball.y > basket.y;
 }
@@ -443,14 +461,11 @@ class Basket implements IRenderable {
     }
 }
 
-type RenderFunction = () => void;
-
-let renderFunction: RenderFunction = renderTitleScreen;
-
 playerImage.src = "img/player.png";
 hoopImage.src = "img/hoop.png";
 ballImage.src = "img/ball.png";
 basketImage.src = "img/basket.png";
+titleBGImage.src = "img/bg_title_small.jpg";
 tryningsVideo.src = "video/trynings_bak.mp4";
 tryningsVideo.loop = true;
 
@@ -522,25 +537,54 @@ function init(): void {
     gameCanvas.height = HEIGHT;
     gameCanvas.width = WIDTH;
 
-    player = new Player(WIDTH / 2, HEIGHT / 2);
-    new Ball(0, 0).attach(player);
-    hoop = new Hoop(WIDTH/2 - hoopImage.width/2, HEIGHT-hoopImage.height);
-    basket = new Basket(hoop.x, hoop.y+68);
-
-    openTitleScreen();
-
-    gameCanvas.addEventListener("click", nextStage);
+    gameCanvas.addEventListener("click", () => {
+        if (stage === GameStage.DeathScreen || stage === GameStage.TitleScreen) {
+            nextStage();
+        }
+    });
 
     document.addEventListener("keydown", e => {
-        if (e.key === "ArrowLeft") {
-            leftDown = true;
+        if (stage === GameStage.TitleScreen) {
+            startGame();
             e.preventDefault();
-        } else if (e.key === "ArrowRight") {
-            rightDown = true;
+        } else if (stage === GameStage.DeathScreen) {
+            reset();
             e.preventDefault();
-        }
+        } else {
+            if (e.key === "ArrowLeft") {
+                leftDown = true;
+                updateDirection();
+                e.preventDefault();
+            } else if (e.key === "ArrowRight") {
+                rightDown = true;
+                updateDirection();
+                e.preventDefault();
+            } else if (e.key === " ") {
+                if (player.attachedBall !== null) {
+                    const ball = player.attachedBall;
+                    player.attachedBall.detach();
 
-        updateDirection();
+                    ball.clearLinearForces();
+                    ball.addForce({magnitude: JUMP_FORCE * 5, angle: player.tilt});
+                    ball.computeForceX();
+                    ball.computeForceY();
+                    ball.computeAccelerationX();
+                    ball.computeAccelerationY();
+                    ball.computeSpeedX();
+                    ball.computeSpeedY();
+                    ball.computeX();
+                    ball.computeY();
+                }
+                e.preventDefault();
+            } else if (e.key === "e") {
+                if (player.attachedBall !== null) {
+                    player.attachedBall.detach();
+                }
+                e.preventDefault();
+            } else if (e.key === "b") {
+                cycleBackground();
+            }
+        }
     });
 
     document.addEventListener("keyup", e => {
@@ -553,35 +597,31 @@ function init(): void {
         updateDirection();
     });
 
-    document.addEventListener("keypress", e => {
-        if (e.key === " ") {
-            if (player.attachedBall !== null) {
-                const ball = player.attachedBall;
-                player.attachedBall.detach();
-
-                ball.clearLinearForces();
-                ball.addForce({magnitude: JUMP_FORCE*5, angle: player.tilt});
-                ball.computeForceX();
-                ball.computeForceY();
-                ball.computeAccelerationX();
-                ball.computeAccelerationY();
-                ball.computeSpeedX();
-                ball.computeSpeedY();
-                ball.computeX();
-                ball.computeY();
-            }
-            e.preventDefault();
-        } else if (e.key === "e" || e.key === "E") {
-            if (player.attachedBall !== null) {
-                player.attachedBall.detach();
-            }
-            e.preventDefault();
-        }
-    });
-
+    setupSprites();
+    openTitleScreen();
 
     requestAnimationFrame(renderWrapper);
 
+}
+
+function setupSprites(): void {
+    player = new Player(WIDTH / 2, HEIGHT / 2);
+    new Ball(0, 0).attach(player);
+    hoop = new Hoop(WIDTH / 2 - hoopImage.width / 2, HEIGHT - hoopImage.height);
+    basket = new Basket(hoop.x, hoop.y + 68);
+
+}
+
+function reset(): void {
+    renderables.splice(0, renderables.length);
+    goals = 0;
+    currentBackgroundIndex = Math.floor(Math.random() * bgImages.length);
+    setupSprites();
+    openTitleScreen();
+}
+
+function cycleBackground(): void {
+    currentBackgroundIndex = ++currentBackgroundIndex % bgImages.length;
 }
 
 function registerRenderable(target: IRenderable): void {
@@ -592,6 +632,7 @@ function registerRenderable(target: IRenderable): void {
 function nextStage(): void {
     switch (stage) {
         case GameStage.DeathScreen:
+            reset();
             break;
         case GameStage.Game:
             die();
@@ -604,9 +645,7 @@ function nextStage(): void {
 
 function die(): void {
     window.clearInterval(ticker);
-    console.log("deaded");
     stage = GameStage.DeathScreen;
-    renderFunction = renderDeathScreen;
     tryningsVideo.play().catch(() => console.error("Couldn't play death clip."));
 }
 
@@ -614,6 +653,7 @@ function renderWrapper() {
     switch (stage) {
         case GameStage.DeathScreen:
             renderDeathScreen();
+            renderGameOverlay();
             break;
         case GameStage.Game:
             renderGame();
@@ -647,20 +687,19 @@ function startGame(): void {
 
 function renderGame(): void {
     ctx.fillStyle = "gray";
-    ctx.fillRect(0, 0, WIDTH - 1, HEIGHT - 1);
+    ctx.drawImage(bgImages[currentBackgroundIndex], 0, 0);
 }
 
 function renderGameOverlay(): void {
-    ctx.fillStyle = "black";
+    ctx.fillStyle = "#b35900";
     ctx.font = "30px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("🏀" + goals, WIDTH/2, 15, 100);
+    ctx.fillText("🏀" + goals, WIDTH / 2, 15, 100);
 }
 
 function renderTitleScreen(): void {
-    ctx.fillStyle = "beige";
-    ctx.fillRect(0, 0, WIDTH - 1, HEIGHT - 1);
+    ctx.drawImage(titleBGImage, 0, 0);
 
     const title = "BasketFall";
 
