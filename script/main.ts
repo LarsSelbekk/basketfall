@@ -149,8 +149,9 @@ enum Direction {
 const WIDTH = 1280;
 const HEIGHT = 720;
 
-const GRAVITY: LinearForce = {magnitude: 0.000981 / 5, angle: Math.PI};
+const GRAVITY = 0.00981 * 2.5;
 const JUMP_FORCE = 0.08 / 2;
+const BOUNCE_FACTOR = 0.9;
 const TILT_FLUCTUATION_FORCE_MAX = 1e-6;
 const PLAYER_TILT_CONTROL_FORCE = 1e-6;
 const TICK_INTERVAL = 1000 / 600;
@@ -169,6 +170,7 @@ const ctx = gameCanvas.getContext("2d");
 const renderables: IRenderable[] = [];
 const balls: Ball[] = [];
 
+let goals: number = 0;
 let player: Player;
 let hoop: Hoop;
 let basket: Basket;
@@ -188,6 +190,7 @@ function removeRenderable(renderable: IRenderable): void {
 
 class Player extends PhysicsObject implements IRenderable, ICenteredRotatableComponent, ITickable {
     visible: boolean = false;
+    attachedBall: Ball = null;
 
     constructor(x: number, y: number, z: number = 0, weight: number = 120) {
         super(x, y, z, playerImage.width, playerImage.height, weight, 0.0075, 0.00001, 0.000005);
@@ -207,9 +210,9 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
         this.computeTilt();
 
         this.clearLinearForces();
-        this.addForce(GRAVITY);
+        this.addForce({magnitude: GRAVITY/this.weight, angle: Math.PI});
 
-        if (boundingBoxBottomY(this) > HEIGHT) {
+        if (bottomRightCornerY(this) > HEIGHT) {
             if (Math.abs(this.tilt) >= Math.PI / 2) {
                 die();
             } else {
@@ -218,13 +221,16 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
                 }
                 this.computeForceY();
                 this.addForce({magnitude: -this.forceY, angle: 0});
-                this.addForce({magnitude: JUMP_FORCE, angle: this.tilt});
+                this.addForce({magnitude: JUMP_FORCE*Math.abs(Math.cos(this.tilt)), angle: this.tilt});
                 // this.forceY = -JUMP_FORCE * Math.cos(this.tilt);
                 // this.forceX = JUMP_FORCE * Math.sin(this.tilt);
             }
         }
 
-        this.addForce({magnitude: -Math.sign(this.speedX) * this.speedX ** 2 * this.airResistanceX, angle: Math.PI/2});
+        this.addForce({
+            magnitude: -Math.sign(this.speedX) * this.speedX ** 2 * this.airResistanceX,
+            angle: Math.PI / 2,
+        });
         this.computeForceX();
         this.computeAccelerationX();
         this.computeSpeedX();
@@ -279,29 +285,33 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
     }
 }
 
-class Ball implements IRenderable, ITickable {
+class Ball extends PhysicsObject implements IRenderable, ITickable {
     visible: boolean;
-    x: number;
-    y: number;
-    z: number;
     attachedPlayer: Player = null;
-    width: number = ballImage.width;
-    height: number = ballImage.height;
+    contacting: boolean = false;
 
     attach(player: Player) {
         this.attachedPlayer = player;
+        player.attachedBall = this;
+        this.tick();
         // removeRenderable(this);
     }
 
     unAttach(): void {
         // registerRenderable(this);
+        this.speedX = this.attachedPlayer.speedX;
+        this.speedY = this.attachedPlayer.speedY;
+
+        if (basket !== undefined && basket !== null && ballInBasket(this, basket)) {
+            this.speedX = 0;
+            goals++;
+        }
+        this.attachedPlayer.attachedBall = null;
         this.attachedPlayer = null;
     }
 
     constructor(x: number, y: number, z: number = -2) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        super(x, y, z, ballImage.width, ballImage.height, 20, 1e-10, 1e-5, 1e-5);
         registerRenderable(this);
         balls.push(this);
     }
@@ -310,6 +320,53 @@ class Ball implements IRenderable, ITickable {
         if (this.attachedPlayer !== null) {
             this.x = topLeftCornerX(this.attachedPlayer);
             this.y = topLeftCornerY(this.attachedPlayer);
+        } else {
+            this.clearLinearForces();
+
+            if (this.y + this.height > HEIGHT) {
+            //     if (this.speedY > 0) {
+            //         this.speedY = 0;
+            //     }
+            //     this.computeForceY();
+            //     this.addForce({magnitude: -this.forceY, angle: 0});
+            //     this.addForce({magnitude: JUMP_FORCE, angle: this.tilt});
+                // this.forceY = -JUMP_FORCE * Math.cos(this.tilt);
+                // this.forceX = JUMP_FORCE * Math.sin(this.tilt);
+                balls.splice(balls.indexOf(this));
+                removeRenderable(this);
+                new Ball(0,0).attach(player);
+                balls[0].visible = true;
+            }
+
+            if (ballInBasket(this, basket)) {
+                this.speedX = 0;
+                if (!this.contacting) {
+                    this.speedY = 0;
+                    console.log(++goals);
+                }
+                this.contacting = true;
+
+            } else {
+                this.contacting = false;
+            }
+            this.addForce({magnitude: GRAVITY/this.weight, angle: Math.PI});
+
+
+            this.addForce({
+                magnitude: -Math.sign(this.speedX) * this.speedX ** 2 * this.airResistanceX,
+                angle: Math.PI / 2,
+            });
+            this.computeForceX();
+            this.computeAccelerationX();
+            this.computeSpeedX();
+            this.computeX();
+
+
+            this.addForce({magnitude: Math.sign(this.speedY) * this.speedY ** 2 * this.airResistanceY, angle: 0});
+            this.computeForceY();
+            this.computeAccelerationY();
+            this.computeSpeedY();
+            this.computeY();
         }
     }
 
@@ -329,6 +386,14 @@ class Ball implements IRenderable, ITickable {
         }
     }
 
+}
+
+// TODO: Taper
+function ballInBasket(ball: Ball, basket: Basket): boolean {
+    return basket.x < ball.x &&
+        ball.x < basket.x + basket.width &&
+        basket.y < ball.y &&
+        ball.y < basket.y + basket.height;
 }
 
 class Hoop implements IRenderable {
@@ -454,8 +519,8 @@ function init(): void {
 
     player = new Player(WIDTH / 2, HEIGHT / 2);
     new Ball(0, 0).attach(player);
-    hoop = new Hoop(40, 10);
-    basket = new Basket(hoop.x, hoop.y - hoop.height + basketImage.height);
+    hoop = new Hoop(WIDTH/2 - hoopImage.width/2, HEIGHT-hoopImage.height);
+    basket = new Basket(hoop.x, hoop.y+68);
 
     openTitleScreen();
 
@@ -483,11 +548,27 @@ function init(): void {
 
     document.addEventListener("keypress", e => {
         if (e.key === " ") {
-            balls[0].unAttach();
-            // e.stopPropagation();
-            // e.stopImmediatePropagation();
+            if (player.attachedBall !== null) {
+                const ball = player.attachedBall;
+                player.attachedBall.unAttach();
+
+                ball.clearLinearForces();
+                ball.addForce({magnitude: JUMP_FORCE*5, angle: player.tilt});
+                ball.computeForceX();
+                ball.computeForceY();
+                ball.computeAccelerationX();
+                ball.computeAccelerationY();
+                ball.computeSpeedX();
+                ball.computeSpeedY();
+                ball.computeX();
+                ball.computeY();
+            }
             e.preventDefault();
-            // return false;
+        } else if (e.key === "e" || e.key === "E") {
+            if (player.attachedBall !== null) {
+                player.attachedBall.unAttach();
+            }
+            e.preventDefault();
         }
     });
 
