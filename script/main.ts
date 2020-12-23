@@ -160,11 +160,11 @@ const TITLE_WIDTH = 500;
 const TITLE_FONT = "Cambria";
 const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
 
-const video_trynings_bak = document.getElementById("video_trynings_bak") as HTMLVideoElement;
 const playerImage = document.createElement("img");
 const hoopImage = document.createElement("img");
 const ballImage = document.createElement("img");
 const basketImage = document.createElement("img");
+const tryningsVideo = document.createElement("video");
 
 const ctx = gameCanvas.getContext("2d");
 const renderables: IRenderable[] = [];
@@ -212,10 +212,10 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
         this.clearLinearForces();
         this.addForce({magnitude: GRAVITY/this.weight, angle: Math.PI});
 
-        if (bottomRightCornerY(this) > HEIGHT) {
+        if (boundingBoxBottomY(this) > HEIGHT) {
             if (Math.abs(this.tilt) >= Math.PI / 2) {
                 die();
-            } else {
+            } else if (bottomRightCornerY(this) > HEIGHT){
                 if (this.speedY > 0) {
                     this.speedY = 0;
                 }
@@ -261,26 +261,26 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
             ctx.restore();
 
             // Debug: show the sprite's center with a square
-            ctx.fillStyle = "pink";
-            ctx.fillRect(this.x - 10, this.y - 10, 20, 20);
+            // ctx.fillStyle = "pink";
+            // ctx.fillRect(this.x - 10, this.y - 10, 20, 20);
 
-            const bottomLeftX = bottomLeftCornerX(this);
-            const bottomLeftY = bottomLeftCornerY(this);
-            const bottomRightX = bottomRightCornerX(this);
-            const bottomRightY = bottomRightCornerY(this);
-            const topRightX = topRightCornerX(this);
-            const topRightY = topRightCornerY(this);
-            const topLeftX = topLeftCornerX(this);
-            const topLeftY = topLeftCornerY(this);
-
-            ctx.fillStyle = "red";
-            ctx.fillRect(bottomLeftX - 10, bottomLeftY - 10, 20, 20);
-            ctx.fillStyle = "orange";
-            ctx.fillRect(bottomRightX - 10, bottomRightY - 10, 20, 20);
-            ctx.fillStyle = "yellow";
-            ctx.fillRect(topRightX - 10, topRightY - 10, 20, 20);
-            ctx.fillStyle = "brown";
-            ctx.fillRect(topLeftX - 10, topLeftY - 10, 20, 20);
+            // Debug: show corners
+            // const bottomLeftX = bottomLeftCornerX(this);
+            // const bottomLeftY = bottomLeftCornerY(this);
+            // const bottomRightX = bottomRightCornerX(this);
+            // const bottomRightY = bottomRightCornerY(this);
+            // const topRightX = topRightCornerX(this);
+            // const topRightY = topRightCornerY(this);
+            // const topLeftX = topLeftCornerX(this);
+            // const topLeftY = topLeftCornerY(this);
+            // ctx.fillStyle = "red";
+            // ctx.fillRect(bottomLeftX - 10, bottomLeftY - 10, 20, 20);
+            // ctx.fillStyle = "orange";
+            // ctx.fillRect(bottomRightX - 10, bottomRightY - 10, 20, 20);
+            // ctx.fillStyle = "yellow";
+            // ctx.fillRect(topRightX - 10, topRightY - 10, 20, 20);
+            // ctx.fillStyle = "brown";
+            // ctx.fillRect(topLeftX - 10, topLeftY - 10, 20, 20);
         }
     }
 }
@@ -381,19 +381,23 @@ class Ball extends PhysicsObject implements IRenderable, ITickable {
             ctx.restore();
 
             // Debug: show the sprite's center with a square
-            ctx.fillStyle = "pink";
-            ctx.fillRect(this.x + this.width / 2 - 10, this.y + this.height / 2 - 10, 20, 20);
+            // ctx.fillStyle = "pink";
+            // ctx.fillRect(this.x + this.width / 2 - 10, this.y + this.height / 2 - 10, 20, 20);
         }
     }
 
 }
 
-// TODO: Taper
 function ballInBasket(ball: Ball, basket: Basket): boolean {
-    return basket.x < ball.x &&
-        ball.x < basket.x + basket.width &&
-        basket.y < ball.y &&
-        ball.y < basket.y + basket.height;
+    const topHorizontalOff = 3;
+    // return basket.x < ball.x &&
+    //     ball.x < basket.x + basket.width &&
+    //     basket.y < ball.y &&
+    //     ball.y < basket.y + basket.height;
+    return ball.x > basket.x + topHorizontalOff + (ball.y-basket.y)*(basket.width - topHorizontalOff * 2) / (2 * basket.height) &&
+        ball.x < basket.x  - topHorizontalOff + basket.width/2 + (ball.y-basket.y)*(basket.width - topHorizontalOff * 2) / (2*basket.height) &&
+        ball.y < basket.y + basket.height &&
+        ball.y > basket.y;
 }
 
 class Hoop implements IRenderable {
@@ -444,10 +448,12 @@ type RenderFunction = () => void;
 
 let renderFunction: RenderFunction = renderTitleScreen;
 
-playerImage.src = "../img/player.png";
-hoopImage.src = "../img/hoop.png";
-ballImage.src = "../img/ball.png";
-basketImage.src = "../img/basket.png";
+playerImage.src = "img/player.png";
+hoopImage.src = "img/hoop.png";
+ballImage.src = "img/ball.png";
+basketImage.src = "img/basket.png";
+tryningsVideo.src = "video/trynings_bak.mp4";
+tryningsVideo.loop = true;
 
 const images: HTMLImageElement[] = [playerImage, hoopImage, ballImage, basketImage];
 
@@ -600,7 +606,7 @@ function die(): void {
     console.log("deaded");
     stage = GameStage.DeathScreen;
     renderFunction = renderDeathScreen;
-    video_trynings_bak.play().catch(() => console.error("Couldn't play death clip."));
+    tryningsVideo.play().catch(() => console.error("Couldn't play death clip."));
 }
 
 function renderWrapper() {
@@ -670,9 +676,9 @@ function renderDeathScreen(): void {
     ctx.fillRect(0, 0, WIDTH - 1, HEIGHT - 1);
 
     ctx.drawImage(
-        video_trynings_bak,
-        WIDTH / 2 - video_trynings_bak.videoWidth / 2,
-        HEIGHT / 2 - video_trynings_bak.videoHeight / 2);
+        tryningsVideo,
+        WIDTH / 2 - tryningsVideo.videoWidth / 2,
+        HEIGHT / 2 - tryningsVideo.videoHeight / 2);
     ctx.font = TITLE_WIDTH + "px " + TITLE_FONT;
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
