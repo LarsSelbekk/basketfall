@@ -17,6 +17,123 @@ interface ITickable {
     tick(): void;
 }
 
+type LinearForce = { magnitude: number, angle: number };
+type Torque = number;
+
+class PhysicsObject {
+    x: number;
+    y: number;
+    z: number;
+    tilt: number = 0;
+    readonly width: number;
+    readonly height: number;
+    readonly weight: number;
+    readonly airResistanceAngle: number;
+    readonly airResistanceX: number;
+    readonly airResistanceY: number;
+    speedX: number = 0;
+    speedY: number = 0;
+    speedAngle: number = 0;
+    accelerationAngle: number = 0;
+    accelerationX: number = 0;
+    accelerationY: number = 0;
+    forceAngle: number = 0;
+    forceX: number = 0;
+    forceY: number = 0;
+    private linearForces: LinearForce[] = [];
+    private angularForces: Torque[] = [];
+
+
+    constructor(x: number, y: number, z: number, width: number, height: number, weight: number, airResistanceAngle: number, airResistanceX: number,
+                airResistanceY: number) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.width = width;
+        this.height = height;
+        this.weight = weight;
+        this.airResistanceAngle = airResistanceAngle;
+        this.airResistanceX = airResistanceX;
+        this.airResistanceY = airResistanceY;
+    }
+
+    clearLinearForces(): void {
+        this.linearForces = [];
+    }
+
+    clearAngularForces(): void {
+        this.angularForces = [];
+    }
+
+    addForce(force: LinearForce): void {
+        this.linearForces.push(force);
+    }
+
+    computeForceX(): void {
+        let sum = 0;
+        for (const force of this.linearForces) {
+            sum += force.magnitude * Math.sin(force.angle);
+        }
+        this.forceX = sum;
+    }
+
+    computeForceY(): void {
+        let sum = 0;
+        for (const force of this.linearForces) {
+            sum -= force.magnitude * Math.cos(force.angle);
+        }
+        this.forceY = sum;
+    }
+
+    addTorque(torque: Torque): void {
+        this.angularForces.push(torque);
+    }
+
+    computeTorque(): void {
+        this.forceAngle = this.angularForces.reduce((n, x) => n + x, 0);
+    }
+
+    computeAcceleration(force: number): number {
+        return force * this.weight;
+    }
+
+    computeAngularAcceleration(): void {
+        this.accelerationAngle = this.computeAcceleration(this.forceAngle);
+    }
+
+    computeAccelerationX(): void {
+        this.accelerationX = this.computeAcceleration(this.forceX);
+    }
+
+    computeAccelerationY(): void {
+        this.accelerationY = this.computeAcceleration(this.forceY);
+    }
+
+    computeSpeedAngle(): void {
+        this.speedAngle += this.accelerationAngle;
+    }
+
+    computeTilt(): void {
+        this.tilt += this.speedAngle;
+    }
+
+    computeSpeedX(): void {
+        this.speedX += this.accelerationX;
+    }
+
+    computeX(): void {
+        this.x += this.speedX;
+    }
+
+    computeSpeedY(): void {
+        this.speedY += this.accelerationY;
+    }
+
+    computeY(): void {
+        this.y += this.speedY;
+    }
+}
+
 enum GameStage {
     TitleScreen,
     Game,
@@ -32,7 +149,7 @@ enum Direction {
 const WIDTH = 1280;
 const HEIGHT = 720;
 
-const GRAVITY = 0.000981 / 5;
+const GRAVITY: LinearForce = {magnitude: 0.000981 / 5, angle: Math.PI};
 const JUMP_FORCE = 0.08 / 2;
 const TILT_FLUCTUATION_FORCE_MAX = 1e-6;
 const PLAYER_TILT_CONTROL_FORCE = 1e-6;
@@ -69,46 +186,28 @@ function removeRenderable(renderable: IRenderable): void {
     renderables.sort((a, b) => a.z - b.z);
 }
 
-class Player implements IRenderable, ICenteredRotatableComponent, ITickable {
-    readonly width: number = playerImage.width;
-    readonly height: number = playerImage.height;
-    readonly weight: number;
-    readonly airResistanceAngle: number = 0.0075;
-    readonly airResistanceX: number = 0.00001;
-    readonly airResistanceY: number = 0.000005;
-    x: number;
-    y: number;
-    z: number;
-    tilt: number = 0;
+class Player extends PhysicsObject implements IRenderable, ICenteredRotatableComponent, ITickable {
     visible: boolean = false;
-    speedX: number = 0;
-    speedY: number = 0;
-    speedAngle: number = 0;
-    accelerationAngle: number = 0;
-    accelerationX: number = 0;
-    accelerationY: number = GRAVITY;
-    forceAngle: number = 0;
-    forceX: number = 0;
-    forceY: number = 0;
 
     constructor(x: number, y: number, z: number = 0, weight: number = 120) {
+        super(x, y, z, playerImage.width, playerImage.height, weight, 0.0075, 0.00001, 0.000005);
         this.x = x;
         this.y = y;
         this.z = z;
-        this.weight = weight;
         registerRenderable(this);
     }
 
     tick(): void {
-        this.forceAngle = (Math.random() - 0.5) * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE;
-        this.forceAngle -= Math.sign(this.speedAngle) * this.speedAngle ** 2 * this.airResistanceAngle;
-        this.accelerationAngle = this.weight * this.forceAngle;
-        this.speedAngle += this.accelerationAngle;
-        this.tilt += this.speedAngle;
-        this.tilt %= 2 * Math.PI;
+        this.clearAngularForces();
+        this.addTorque((Math.random() - 0.5) * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE);
+        this.addTorque(-Math.sign(this.speedAngle) * this.speedAngle ** 2 * this.airResistanceAngle);
+        this.computeTorque();
+        this.computeAngularAcceleration();
+        this.computeSpeedAngle();
+        this.computeTilt();
 
-        this.forceX = 0;
-        this.forceY = GRAVITY;
+        this.clearLinearForces();
+        this.addForce(GRAVITY);
 
         if (boundingBoxBottomY(this) > HEIGHT) {
             if (Math.abs(this.tilt) >= Math.PI / 2) {
@@ -117,22 +216,26 @@ class Player implements IRenderable, ICenteredRotatableComponent, ITickable {
                 if (this.speedY > 0) {
                     this.speedY = 0;
                 }
-                this.forceY = -JUMP_FORCE * Math.cos(this.tilt);
-                this.forceX = JUMP_FORCE * Math.sin(this.tilt);
+                this.computeForceY();
+                this.addForce({magnitude: -this.forceY, angle: 0});
+                this.addForce({magnitude: JUMP_FORCE, angle: this.tilt});
+                // this.forceY = -JUMP_FORCE * Math.cos(this.tilt);
+                // this.forceX = JUMP_FORCE * Math.sin(this.tilt);
             }
         }
 
-        this.forceX -= Math.sign(this.speedX) * this.speedX ** 2 * this.airResistanceX;
-        this.accelerationX = this.forceX * this.weight;
-        this.speedX += this.accelerationX;
-        this.x += this.speedX;
+        this.addForce({magnitude: -Math.sign(this.speedX) * this.speedX ** 2 * this.airResistanceX, angle: Math.PI/2});
+        this.computeForceX();
+        this.computeAccelerationX();
+        this.computeSpeedX();
+        this.computeX();
 
 
-        this.forceY -= Math.sign(this.speedY) * this.speedY ** 2 * this.airResistanceY;
-        this.accelerationY = this.forceY * this.weight;
-        this.speedY += this.accelerationY;
-        // this.speedY = 0;
-        this.y += this.speedY;
+        this.addForce({magnitude: Math.sign(this.speedY) * this.speedY ** 2 * this.airResistanceY, angle: 0});
+        this.computeForceY();
+        this.computeAccelerationY();
+        this.computeSpeedY();
+        this.computeY();
     }
 
     render(): void {
@@ -213,7 +316,7 @@ class Ball implements IRenderable, ITickable {
     render(): void {
         if (this.visible) {
             ctx.save();
-            ctx.translate(this.x,this.y);
+            ctx.translate(this.x, this.y);
             if (this.attachedPlayer !== null) {
                 ctx.rotate(this.attachedPlayer.tilt);
             }
@@ -324,7 +427,7 @@ function topRightCornerY(b: ICenteredRotatableComponent): number {
 }
 
 function bottomRightCornerY(b: ICenteredRotatableComponent): number {
-    return b.y + Math.sqrt(b.height ** 2 + b.width ** 2) * Math.cos(b.tilt - Math.atan(b.width/b.height)) / 2;
+    return b.y + Math.sqrt(b.height ** 2 + b.width ** 2) * Math.cos(b.tilt - Math.atan(b.width / b.height)) / 2;
 }
 
 function boundingBoxBottomY(b: ICenteredRotatableComponent): number {
