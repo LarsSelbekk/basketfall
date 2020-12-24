@@ -1,9 +1,12 @@
 body {
     overflow: hidden;
     margin: 0;
+    text-align: center;
+    background-color: black;
 }
 
 #game {
+    object-fit: contain;
     width: 100vw;
-    max-height: 100vh;
+    height: 100vh;
 }
