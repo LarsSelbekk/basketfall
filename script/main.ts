@@ -217,45 +217,49 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
     }
 
     tick(): void {
-        this.clearAngularForces();
-        this.addTorque((Math.random() - 0.5) * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE);
-        this.addTorque(-Math.sign(this.speedAngle) * this.speedAngle ** 2 * this.airResistanceAngle);
-        this.computeTorque();
-        this.computeAngularAcceleration();
-        this.computeSpeedAngle();
-        this.computeTilt();
+        if (boundingBoxRightX(this) < -WIDTH / 20 || boundingBoxLeftX(this) > WIDTH + WIDTH/20) {
+            die();
+        } else {
+            this.clearAngularForces();
+            this.addTorque((Math.random() - 0.5) * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE);
+            this.addTorque(-Math.sign(this.speedAngle) * this.speedAngle ** 2 * this.airResistanceAngle);
+            this.computeTorque();
+            this.computeAngularAcceleration();
+            this.computeSpeedAngle();
+            this.computeTilt();
 
-        this.clearLinearForces();
-        this.addForce({magnitude: GRAVITY / this.weight, angle: Math.PI});
+            this.clearLinearForces();
+            this.addForce({magnitude: GRAVITY / this.weight, angle: Math.PI});
 
-        if (boundingBoxBottomY(this) > HEIGHT) {
-            if (Math.abs(this.tilt) >= Math.PI / 2) {
-                die();
-            } else if (bottomRightCornerY(this) > HEIGHT) {
-                if (this.speedY > 0) {
-                    this.speedY = 0;
+            if (boundingBoxBottomY(this) > HEIGHT) {
+                if (Math.abs(this.tilt) >= Math.PI / 2) {
+                    die();
+                } else if (bottomRightCornerY(this) > HEIGHT) {
+                    if (this.speedY > 0) {
+                        this.speedY = 0;
+                    }
+                    this.computeForceY();
+                    this.addForce({magnitude: -this.forceY, angle: 0});
+                    this.addForce({magnitude: JUMP_FORCE * Math.abs(Math.cos(this.tilt)), angle: this.tilt});
                 }
-                this.computeForceY();
-                this.addForce({magnitude: -this.forceY, angle: 0});
-                this.addForce({magnitude: JUMP_FORCE * Math.abs(Math.cos(this.tilt)), angle: this.tilt});
             }
+
+            this.addForce({
+                magnitude: -Math.sign(this.speedX) * this.speedX ** 2 * this.airResistanceX,
+                angle: Math.PI / 2,
+            });
+            this.computeForceX();
+            this.computeAccelerationX();
+            this.computeSpeedX();
+            this.computeX();
+
+
+            this.addForce({magnitude: Math.sign(this.speedY) * this.speedY ** 2 * this.airResistanceY, angle: 0});
+            this.computeForceY();
+            this.computeAccelerationY();
+            this.computeSpeedY();
+            this.computeY();
         }
-
-        this.addForce({
-            magnitude: -Math.sign(this.speedX) * this.speedX ** 2 * this.airResistanceX,
-            angle: Math.PI / 2,
-        });
-        this.computeForceX();
-        this.computeAccelerationX();
-        this.computeSpeedX();
-        this.computeX();
-
-
-        this.addForce({magnitude: Math.sign(this.speedY) * this.speedY ** 2 * this.airResistanceY, angle: 0});
-        this.computeForceY();
-        this.computeAccelerationY();
-        this.computeSpeedY();
-        this.computeY();
     }
 
     render(): void {
@@ -506,6 +510,18 @@ function bottomRightCornerY(b: ICenteredRotatableComponent): number {
 
 function boundingBoxBottomY(b: ICenteredRotatableComponent): number {
     return Math.max(bottomLeftCornerY(b), bottomRightCornerY(b), topRightCornerY(b), topLeftCornerY(b));
+}
+
+function boundingBoxTopY(b: ICenteredRotatableComponent): number {
+    return Math.min(bottomLeftCornerY(b), bottomRightCornerY(b), topRightCornerY(b), topLeftCornerY(b));
+}
+
+function boundingBoxLeftX(b: ICenteredRotatableComponent): number {
+    return Math.min(bottomLeftCornerX(b), bottomRightCornerX(b), topRightCornerX(b), topLeftCornerX(b));
+}
+
+function boundingBoxRightX(b: ICenteredRotatableComponent): number {
+    return Math.max(bottomLeftCornerX(b), bottomRightCornerX(b), topRightCornerX(b), topLeftCornerX(b));
 }
 
 function updateDirection(): void {
