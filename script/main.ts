@@ -519,13 +519,72 @@ function updateDirection(): void {
     }
 }
 
+function touch(xProportion: number, yProportion: number): void {
+    if (xProportion < 1 / 4) {
+        leftDown = true;
+        updateDirection();
+    } else if (xProportion > 3 / 4) {
+        rightDown = true;
+        updateDirection();
+    } else {
+        if (yProportion > 1 / 2) {
+            dropBall();
+        } else {
+            shootBall();
+        }
+    }
+}
+
+function touchUp() {
+    leftDown = false;
+    rightDown = false;
+    updateDirection();
+}
+
 function init(): void {
     gameCanvas.height = HEIGHT;
     gameCanvas.width = WIDTH;
 
-    gameCanvas.addEventListener("click", () => {
+    gameCanvas.addEventListener("mousedown", e => {
         if (stage === GameStage.DeathScreen || stage === GameStage.TitleScreen) {
             nextStage();
+        } else {
+            const xProportion = e.offsetX / gameCanvas.width;
+            const yProportion = e.offsetY / gameCanvas.height;
+            touch(xProportion, yProportion);
+        }
+        e.preventDefault();
+    });
+
+    gameCanvas.addEventListener("touchstart", e=>{
+        if (e.targetTouches.item(0).force > 0.1) {
+            if (stage === GameStage.DeathScreen || stage === GameStage.TitleScreen) {
+                nextStage();
+            } else {
+                touch((e.targetTouches.item(0).pageX - gameCanvas.offsetLeft) / gameCanvas.offsetWidth,
+                    (e.targetTouches.item(0).pageY - gameCanvas.offsetTop) / gameCanvas.offsetHeight);
+            }
+        }
+    });
+
+    gameCanvas.addEventListener("touchend", e => {
+        if (stage === GameStage.Game) {
+            touchUp();
+            e.preventDefault();
+        }
+    });
+
+    gameCanvas.addEventListener("mouseup", e => {
+        if (stage === GameStage.Game) {
+            const xProportion = e.offsetX / gameCanvas.width;
+            if (xProportion < 1 / 4) {
+                leftDown = false;
+                updateDirection();
+            } else if (xProportion > 3 / 4) {
+                rightDown = false;
+                updateDirection();
+            }
+            e.preventDefault();
         }
     });
 
@@ -548,26 +607,10 @@ function init(): void {
                 updateDirection();
                 e.preventDefault();
             } else if (e.key === " ") {
-                if (player.attachedBall !== null) {
-                    const ball = player.attachedBall;
-                    player.attachedBall.detach();
-
-                    ball.clearLinearForces();
-                    ball.addForce({magnitude: JUMP_FORCE * 5, angle: player.tilt});
-                    ball.computeForceX();
-                    ball.computeForceY();
-                    ball.computeAccelerationX();
-                    ball.computeAccelerationY();
-                    ball.computeSpeedX();
-                    ball.computeSpeedY();
-                    ball.computeX();
-                    ball.computeY();
-                }
+                shootBall();
                 e.preventDefault();
             } else if (e.key === "e") {
-                if (player.attachedBall !== null) {
-                    player.attachedBall.detach();
-                }
+                dropBall();
                 e.preventDefault();
             } else if (e.key === "b") {
                 cycleBackground();
@@ -592,6 +635,30 @@ function init(): void {
 
 }
 
+function dropBall(): void {
+    if (player.attachedBall !== null) {
+        player.attachedBall.detach();
+    }
+}
+
+function shootBall(): void {
+    if (player.attachedBall !== null) {
+        const ball = player.attachedBall;
+        player.attachedBall.detach();
+
+        ball.clearLinearForces();
+        ball.addForce({magnitude: JUMP_FORCE * 5, angle: player.tilt});
+        ball.computeForceX();
+        ball.computeForceY();
+        ball.computeAccelerationX();
+        ball.computeAccelerationY();
+        ball.computeSpeedX();
+        ball.computeSpeedY();
+        ball.computeX();
+        ball.computeY();
+    }
+}
+
 function setupSprites(): void {
     player = new Player(WIDTH / 2, HEIGHT / 2);
     new Ball(0, 0).attach(player);
@@ -601,6 +668,9 @@ function setupSprites(): void {
 }
 
 function reset(): void {
+    leftDown = false;
+    rightDown = false;
+    updateDirection();
     renderables.splice(0, renderables.length);
     goals = 0;
     currentBackgroundIndex = Math.floor(Math.random() * bgImages.length);
