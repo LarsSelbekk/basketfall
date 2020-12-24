@@ -155,7 +155,7 @@ const TILT_FLUCTUATION_FORCE_MAX = 1e-6;
 const PLAYER_TILT_CONTROL_FORCE = 1e-6;
 const TICK_INTERVAL = 1000 / 600;
 
-const TITLE_WIDTH = 500;
+const TITLE_WIDTH = 200;
 const TITLE_FONT = "Cambria";
 const gameCanvas = document.getElementById("game") as HTMLCanvasElement;
 
@@ -689,20 +689,27 @@ function renderGameOverlay(): void {
 function renderTitleScreen(): void {
     ctx.drawImage(titleBGImage, 0, 0);
 
+    ctx.font = "120px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("↪", WIDTH / 8, HEIGHT / 2);
+    ctx.fillText("↩", 7 * WIDTH / 8, HEIGHT / 2);
+    ctx.fillText("🤾", WIDTH / 2, HEIGHT / 4);
+    ctx.fillText("⚓", WIDTH / 2, 3 * HEIGHT / 4);
+
     const title = "BasketFall";
 
     ctx.font = TITLE_WIDTH + "px " + TITLE_FONT;
     ctx.textAlign = "center";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "#101010";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(title, WIDTH / 2, HEIGHT / 2);
 
-    ctx.fillText(title, WIDTH / 2, 500, TITLE_WIDTH);
     ctx.fillStyle = "#00000066";
     ctx.fillRect(WIDTH / 3 - WIDTH / 10, 600 - 55, WIDTH / 3 + WIDTH / 5, 130);
     ctx.fillStyle = "#dddddd";
-    ctx.font = "60px monospace";
-    ctx.fillText("🎮", WIDTH / 2, 600, WIDTH / 2);
     ctx.font = "40px monospace";
+    ctx.fillText("[↩]:🆗", WIDTH / 2, 600, WIDTH / 2);
     ctx.fillText("[🌌]:🤾", WIDTH / 2, 650, TITLE_WIDTH);
     ctx.textAlign = "right";
     ctx.fillText("[◀]: ↪", 2 * WIDTH / 5, 600, WIDTH / 3);
@@ -720,11 +727,11 @@ function renderDeathScreen(): void {
         tryningsVideo,
         WIDTH / 2 - tryningsVideo.videoWidth / 2,
         HEIGHT / 2 - tryningsVideo.videoHeight / 2);
-    ctx.font = TITLE_WIDTH + "px " + TITLE_FONT;
+    ctx.font = TITLE_WIDTH * 2 + "px " + TITLE_FONT;
     ctx.textAlign = "center";
-    ctx.textBaseline = "alphabetic";
+    ctx.textBaseline = "middle";
     ctx.fillStyle = "red";
-    ctx.fillText("TOT", WIDTH / 2, 500, TITLE_WIDTH);
+    ctx.fillText("TOT", WIDTH / 2, HEIGHT / 2);
 
     renderables.forEach(r => r.visible = false);
 }
