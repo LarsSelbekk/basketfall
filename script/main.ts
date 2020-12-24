@@ -202,7 +202,6 @@ function removeRenderable(renderable: IRenderable): void {
     if (index >= 0) {
         renderables.splice(index, 1);
     }
-    renderables.sort((a, b) => a.z - b.z);
 }
 
 class Player extends PhysicsObject implements IRenderable, ICenteredRotatableComponent, ITickable {
@@ -330,6 +329,11 @@ class Ball extends PhysicsObject implements IRenderable, ITickable {
         balls.push(this);
     }
 
+    destroy(): void {
+        balls.splice(balls.indexOf(this), 1);
+        removeRenderable(this);
+    }
+
     tick(): void {
         if (this.attachedPlayer !== null) {
             this.x = topLeftCornerX(this.attachedPlayer);
@@ -337,43 +341,42 @@ class Ball extends PhysicsObject implements IRenderable, ITickable {
         } else {
             this.clearLinearForces();
 
-            if (this.y + this.height > HEIGHT) {
-                balls.splice(balls.indexOf(this), 1);
-                removeRenderable(this);
+            if (this.attachedPlayer === null && this.y + this.height > HEIGHT) {
+                this.destroy();
                 const ball = new Ball(0, 0);
                 ball.attach(player);
                 ball.visible = true;
-            }
-
-            if (ballInBasket(this, basket)) {
-                this.speedX = 0;
-                if (!this.contacting) {
-                    this.speedY = 0;
-                    goals++;
-                }
-                this.contacting = true;
-
             } else {
-                this.contacting = false;
+                if (ballInBasket(this, basket)) {
+                    this.speedX = 0;
+                    if (!this.contacting) {
+                        this.speedY = 0;
+                        goals++;
+                    }
+                    this.contacting = true;
+
+                } else {
+                    this.contacting = false;
+                }
+                this.addForce({magnitude: GRAVITY / this.weight, angle: Math.PI});
+
+
+                this.addForce({
+                    magnitude: -Math.sign(this.speedX) * this.speedX ** 2 * this.airResistanceX,
+                    angle: Math.PI / 2,
+                });
+                this.computeForceX();
+                this.computeAccelerationX();
+                this.computeSpeedX();
+                this.computeX();
+
+
+                this.addForce({magnitude: Math.sign(this.speedY) * this.speedY ** 2 * this.airResistanceY, angle: 0});
+                this.computeForceY();
+                this.computeAccelerationY();
+                this.computeSpeedY();
+                this.computeY();
             }
-            this.addForce({magnitude: GRAVITY / this.weight, angle: Math.PI});
-
-
-            this.addForce({
-                magnitude: -Math.sign(this.speedX) * this.speedX ** 2 * this.airResistanceX,
-                angle: Math.PI / 2,
-            });
-            this.computeForceX();
-            this.computeAccelerationX();
-            this.computeSpeedX();
-            this.computeX();
-
-
-            this.addForce({magnitude: Math.sign(this.speedY) * this.speedY ** 2 * this.airResistanceY, angle: 0});
-            this.computeForceY();
-            this.computeAccelerationY();
-            this.computeSpeedY();
-            this.computeY();
         }
     }
 
@@ -571,7 +574,6 @@ function init(): void {
             const y = (e.targetTouches.item(0).pageY - gameCanvas.offsetTop) / gameCanvas.offsetHeight;
             if (0.875 < x && x < 1 && 0 < y && y < 0.125) {
                 gameCanvas.requestFullscreen().then().catch(() => {});
-                e.preventDefault();
             } else {
                 nextStage();
             }
@@ -581,6 +583,7 @@ function init(): void {
             touch((e.targetTouches.item(0).pageX - gameCanvas.offsetLeft) / gameCanvas.offsetWidth,
                 (e.targetTouches.item(0).pageY - gameCanvas.offsetTop) / gameCanvas.offsetHeight);
         }
+        e.preventDefault();
     });
 
     gameCanvas.addEventListener("touchend", e => {
@@ -677,7 +680,8 @@ function shootBall(): void {
 
 function setupSprites(): void {
     player = new Player(WIDTH / 2, HEIGHT / 2);
-    new Ball(0, 0).attach(player);
+    const ball = new Ball(0, 0);
+    ball.attach(player);
     hoop = new Hoop(WIDTH / 2 - hoopImage.width / 2, HEIGHT - hoopImage.height);
     basket = new Basket(hoop.x, hoop.y + 68);
 
@@ -689,6 +693,7 @@ function reset(): void {
     updateDirection();
     renderables.splice(0, renderables.length);
     goals = 0;
+    balls.splice(0, balls.length);
     currentBackgroundIndex = Math.floor(Math.random() * bgImages.length);
     setupSprites();
     openTitleScreen();
