@@ -451,7 +451,7 @@ playerImage.src = "img/player.png";
 hoopImage.src = "img/hoop.png";
 ballImage.src = "img/ball.png";
 basketImage.src = "img/basket.png";
-titleBGImage.src = "img/bg_title_small.jpg";
+titleBGImage.src = "img/bg_title_touch_zones_small.jpg";
 tryningsVideo.src = "video/trynings_bak.mp4";
 tryningsVideo.loop = true;
 
