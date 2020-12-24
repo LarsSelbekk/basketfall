@@ -546,24 +546,40 @@ function init(): void {
     gameCanvas.width = WIDTH;
 
     gameCanvas.addEventListener("mousedown", e => {
-        if (stage === GameStage.DeathScreen || stage === GameStage.TitleScreen) {
-            nextStage();
-        } else {
-            const xProportion = e.offsetX / gameCanvas.width;
-            const yProportion = e.offsetY / gameCanvas.height;
-            touch(xProportion, yProportion);
-        }
-        e.preventDefault();
-    });
-
-    gameCanvas.addEventListener("touchstart", e=>{
-        if (e.targetTouches.item(0).force > 0.1) {
-            if (stage === GameStage.DeathScreen || stage === GameStage.TitleScreen) {
+            if (stage === GameStage.TitleScreen) {
+                const x = e.offsetX / gameCanvas.width;
+                const y = e.offsetY / gameCanvas.height;
+                if (0.875 < x && x < 1 && 0 < y && y < 0.125) {
+                    gameCanvas.requestFullscreen();
+                } else {
+                    nextStage();
+                }
+            } else if (stage === GameStage.DeathScreen) {
                 nextStage();
             } else {
-                touch((e.targetTouches.item(0).pageX - gameCanvas.offsetLeft) / gameCanvas.offsetWidth,
-                    (e.targetTouches.item(0).pageY - gameCanvas.offsetTop) / gameCanvas.offsetHeight);
+                const xProportion = e.offsetX / gameCanvas.width;
+                const yProportion = e.offsetY / gameCanvas.height;
+                touch(xProportion, yProportion);
             }
+            e.preventDefault();
+        }
+    );
+
+    gameCanvas.addEventListener("touchstart", e => {
+        if (stage === GameStage.TitleScreen) {
+            const x = (e.targetTouches.item(0).pageX - gameCanvas.offsetLeft) / gameCanvas.offsetWidth;
+            const y = (e.targetTouches.item(0).pageY - gameCanvas.offsetTop) / gameCanvas.offsetHeight;
+            if (0.875 < x && x < 1 && 0 < y && y < 0.125) {
+                gameCanvas.requestFullscreen().then().catch(() => {});
+                e.preventDefault();
+            } else {
+                nextStage();
+            }
+        } else if (stage === GameStage.DeathScreen) {
+            nextStage();
+        } else {
+            touch((e.targetTouches.item(0).pageX - gameCanvas.offsetLeft) / gameCanvas.offsetWidth,
+                (e.targetTouches.item(0).pageY - gameCanvas.offsetTop) / gameCanvas.offsetHeight);
         }
     });
 
@@ -787,6 +803,11 @@ function renderTitleScreen(): void {
     ctx.textAlign = "left";
     ctx.fillText("[▶]: ↩", 3 * WIDTH / 5, 600, WIDTH / 3);
     ctx.fillText("[B]: 🗺", 3 * WIDTH / 5, 650, WIDTH / 3);
+
+    ctx.textAlign = "right";
+    ctx.font = "60px monospace";
+    ctx.textBaseline = "top";
+    ctx.fillText("🎬", WIDTH-WIDTH/60, WIDTH/60);
 }
 
 function renderDeathScreen(): void {
