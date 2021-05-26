@@ -833,7 +833,7 @@ function renderTitleScreen(): void {
 
 function renderDeathScreen(): void {
     ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, WIDTH - 1, HEIGHT - 1);
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     ctx.drawImage(
         tryningsVideo,
