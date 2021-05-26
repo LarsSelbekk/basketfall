@@ -232,7 +232,7 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
             this.addForce({magnitude: GRAVITY / this.weight, angle: Math.PI});
 
             if (boundingBoxBottomY(this) > HEIGHT) {
-                if (Math.abs(this.tilt) >= Math.PI / 2) {
+                if (Math.abs(this.tilt-Math.round(this.tilt/(Math.PI*2))*(Math.PI*2)) >= Math.PI / 2) {
                     die();
                 } else if (bottomRightCornerY(this) > HEIGHT && this.speedY>0) {
                     if (this.speedY > 0) {
