@@ -234,7 +234,7 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
             if (boundingBoxBottomY(this) > HEIGHT) {
                 if (Math.abs(this.tilt) >= Math.PI / 2) {
                     die();
-                } else if (bottomRightCornerY(this) > HEIGHT) {
+                } else if (bottomRightCornerY(this) > HEIGHT && this.speedY>0) {
                     if (this.speedY > 0) {
                         this.speedY = 0;
                     }
