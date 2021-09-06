@@ -4,7 +4,7 @@
 
 ## Gameplay
 
-The game is currently hosted [here](http://folk.ntnu.no/larsmse/Random/BasketFall/).
+The game is currently hosted [here](http://folk.ntnu.no/larsmse/basketfall/).
 
 This is a very simple browser-game about scoring in basketball and not falling. Tips:
 
