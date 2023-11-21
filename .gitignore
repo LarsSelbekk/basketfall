@@ -11,12 +11,8 @@ target/
 .classpath
 .project
 
-# GitPod
-.theia/
-
 # Node
 /node_modules/
-/package-lock.json
 
 # TypeScript compilation artifacts
 /script/*.js
