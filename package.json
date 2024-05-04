@@ -1,12 +1,12 @@
 {
-  "name": "BasketFall",
+  "name": "basketfall",
   "version": "1.0.0",
-  "dependencies": {},
   "devDependencies": {
     "tsc-watch": "^4.2.9",
     "typescript": "^4.1.3"
   },
   "scripts": {
     "dev": "tsc-watch"
-  }
+  },
+  "packageManager": "yarn@4.2.1"
 }
