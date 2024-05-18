@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "webworker",
+      "esnext"
+    ],
+    "outDir": "..",
+    "composite": true,
+    "module": "esnext",
+    "target": "es2017",
+    "sourceMap": true,
+    "strict": true
+  },
+  "files": ["web-worker.ts"],
+  "exclude": ["../script/main.ts"],
+}

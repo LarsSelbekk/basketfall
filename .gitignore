@@ -15,5 +15,7 @@ target/
 /node_modules/
 
 # TypeScript compilation artifacts
-/script/*.js
-/script/*.map
+*.js
+*.map
+*.d.ts
+*.tsbuildinfo

@@ -3,15 +3,13 @@
     "module": "esnext",
     "target": "es2017",
     "sourceMap": true,
-    "lib": [
-      "dom",
-      "es5",
-      "scripthost",
-      "es2015"
-    ],
     "strict": true,
   },
-  "exclude": [
-    "node_modules"
+  "references": [{
+    "path": "web-workers"
+  },
+    {
+      "path": "script"
+    }
   ]
 }

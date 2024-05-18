@@ -1,3 +1,24 @@
+export {};
+
+const namedImageUrls = {
+  player: "img/player.png",
+  hoop: "img/hoop.png",
+  ball: "img/ball.png",
+  basket: "img/basket.png",
+  touchZones: "img/bg_title_touch_zones_small.jpg",
+  deathVideo: "video/trynings_bak.mp4",
+};
+
+const backgroundImageUrls: string[] = [
+  "img/bg_dovre_small.jpg",
+  "img/bg_dovre2_small.jpg",
+  "img/bg_galdhopiggen_small.jpg",
+  "img/bg_oy_small.jpg",
+  "img/bg_rosa_small.jpg",
+  "img/bg_skog_small.jpg",
+  "img/bg_strand_small.jpg",
+];
+
 interface IRenderable {
   visible: boolean;
   z: number;
@@ -44,7 +65,8 @@ class PhysicsObject {
   private angularForces: Torque[] = [];
 
 
-  constructor(x: number,
+  constructor(
+    x: number,
     y: number,
     z: number,
     width: number,
@@ -175,15 +197,7 @@ const titleBGImage = document.createElement("img");
 const tryningsVideo = document.createElement("video");
 
 const bgImages: HTMLImageElement[] =
-  [
-    "img/bg_dovre_small.jpg",
-    "img/bg_dovre2_small.jpg",
-    "img/bg_galdhopiggen_small.jpg",
-    "img/bg_oy_small.jpg",
-    "img/bg_rosa_small.jpg",
-    "img/bg_skog_small.jpg",
-    "img/bg_strand_small.jpg",
-  ]
+  backgroundImageUrls
     .map(x => {
       const img = document.createElement("img");
       img.src = x;
@@ -335,7 +349,9 @@ class Ball extends PhysicsObject implements IRenderable, ITickable {
   }
 
   detach(): void {
-    if (!this.attachedPlayer) return;
+    if (!this.attachedPlayer) {
+      return;
+    }
 
     const arm = Math.sqrt((
       this.x - this.attachedPlayer.x
@@ -495,27 +511,46 @@ class Basket implements IRenderable {
   }
 }
 
-playerImage.src = "img/player.png";
-hoopImage.src = "img/hoop.png";
-ballImage.src = "img/ball.png";
-basketImage.src = "img/basket.png";
-titleBGImage.src = "img/bg_title_touch_zones_small.jpg";
-tryningsVideo.src = "video/trynings_bak.mp4";
+playerImage.src = namedImageUrls.player;
+hoopImage.src = namedImageUrls.hoop;
+ballImage.src = namedImageUrls.ball;
+basketImage.src = namedImageUrls.basket;
+titleBGImage.src = namedImageUrls.touchZones;
+tryningsVideo.src = namedImageUrls.deathVideo;
 tryningsVideo.loop = true;
 
 const images: HTMLImageElement[] = [playerImage, hoopImage, ballImage, basketImage];
 
-function tryInit(): void {
-  for (const image of images) {
-    if (!image.complete) {
-      image.addEventListener("load", tryInit);
-      return;
-    }
-  }
-  init();
+// TODO: make hostable
+const rootUrl = window.location.pathname.slice(0, window.location.pathname.lastIndexOf("/"));
+
+async function init(): Promise<void> {
+  await tryRegisterWebWorker();
+
+  await Promise.all(images
+    .filter(image => !image.complete)
+    .map(image => new Promise((resolve) => {
+      image.addEventListener("load", resolve);
+    })));
+
+  run();
 }
 
-tryInit();
+await init();
+
+async function tryRegisterWebWorker(): Promise<void> {
+  try {
+    const serviceWorkerResult = await navigator.serviceWorker.register(
+      `../../web-worker.js`, { scope: `/`, type: "module" });
+    console.log(
+      `Web worker ${serviceWorkerResult.installing ? "installing" : serviceWorkerResult.waiting
+        ? "waiting"
+        : serviceWorkerResult.active ? "active" : "unknown"}`);
+  } catch (e) {
+    console.error("Unable to install web worker");
+    throw e;
+  }
+}
 
 function bottomLeftCornerX(b: ICenteredRotatableComponent): number {
   return b.x - (
@@ -610,7 +645,7 @@ function touchUp() {
   updateDirection();
 }
 
-function init(): void {
+function run(): void {
   gameCanvas.height = HEIGHT;
   gameCanvas.width = WIDTH;
 
@@ -636,9 +671,13 @@ function init(): void {
 
   gameCanvas.addEventListener("touchstart", e => {
     const mainTouch = e.targetTouches[0];
-    if (!mainTouch) return;
+    if (!mainTouch) {
+      return;
+    }
     if (stage === GameStage.TitleScreen) {
-      if (e.targetTouches.length < 1) return;
+      if (e.targetTouches.length < 1) {
+        return;
+      }
       const x = (
         mainTouch.pageX - gameCanvas.offsetLeft
       ) / gameCanvas.offsetWidth;
@@ -923,3 +962,6 @@ function tick(): void {
     ball.tick();
   }
 }
+
+
+export {};
