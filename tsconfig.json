@@ -14,7 +14,7 @@
   },
   "references": [
     {
-      "path": "web-workers"
+      "path": "service-workers"
     },
     {
       "path": "build-tools",

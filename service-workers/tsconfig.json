@@ -12,5 +12,5 @@
     "strict": true,
     "tsBuildInfoFile": ".tsbuildinfo",
   },
-  "files": ["web-worker.ts"],
+  "files": ["service-worker.ts"],
 }
