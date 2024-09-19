@@ -9,9 +9,8 @@
     "composite": true,
     "module": "esnext",
     "target": "es2017",
-    "sourceMap": true,
-    "strict": true
+    "strict": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
   },
   "files": ["web-worker.ts"],
-  "exclude": ["../script/main.ts"],
 }

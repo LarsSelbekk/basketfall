@@ -19,3 +19,6 @@ target/
 *.map
 *.d.ts
 *.tsbuildinfo
+
+# Service worker hashes for caching
+/hashes.json

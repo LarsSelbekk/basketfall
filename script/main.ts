@@ -543,11 +543,12 @@ async function tryRegisterWebWorker(): Promise<void> {
     const serviceWorkerResult = await navigator.serviceWorker.register(
       `../../web-worker.js`, { scope: `/`, type: "module" });
     console.log(
-      `Web worker ${serviceWorkerResult.installing ? "installing" : serviceWorkerResult.waiting
+      `Service worker ${serviceWorkerResult.installing ? "installing" : serviceWorkerResult.waiting
         ? "waiting"
         : serviceWorkerResult.active ? "active" : "unknown"}`);
+    navigator.serviceWorker.controller?.postMessage("refresh")
   } catch (e) {
-    console.error("Unable to install web worker");
+    console.error("Unable to install service worker");
     throw e;
   }
 }

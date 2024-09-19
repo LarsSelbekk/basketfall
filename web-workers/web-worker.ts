@@ -1,77 +1,89 @@
-const images = {
-  player: "img/player.png",
-  hoop: "img/hoop.png",
-  ball: "img/ball.png",
-  basket: "img/basket.png",
-  touchZones: "img/bg_title_touch_zones_small.jpg",
-  deathVideo: "video/trynings_bak.mp4",
-};
-
-const bgImages: string[] = [
-  "img/bg_dovre_small.jpg",
-  "img/bg_dovre2_small.jpg",
-  "img/bg_galdhopiggen_small.jpg",
-  "img/bg_oy_small.jpg",
-  "img/bg_rosa_small.jpg",
-  "img/bg_skog_small.jpg",
-  "img/bg_strand_small.jpg",
-];
+refresh().then();
 
 // TODO: make hostable
 // const pathRoot = self.location.pathname.slice(0, self.location.pathname.lastIndexOf("/"));
 const pathRoot = "";
-
 const cacheName = "v1";
-
-const addResourcesToCache = async (resources: string[]) => {
-  console.log(`Caching ${resources.join("\n")}`);
-  const cache = await caches.open(cacheName);
-  await cache.addAll(resources.map(resource => `${pathRoot}/${resource}`));
-};
 
 self.addEventListener("install", (event) => {
   console.log("Installing...");
   console.log("pathRoot: ", pathRoot);
   (
     event as ExtendableEvent
-  ).waitUntil(
-    addResourcesToCache([
-      ...staticAssetUrls,
-      ...bgImages,
-      ...Object.values(images),
-    ]),
-  );
+  ).waitUntil(refresh());
+});
+
+self.addEventListener("message", (ev: MessageEvent) => {
+  if (ev.data === "refresh") {
+    refresh().then();
+  }
 });
 
 self.addEventListener('fetch', async (event) => {
+
   const fetchEvent = event as FetchEvent;
+
   const retrieve = async () => {
     const cache = await caches.open(cacheName);
     const cachedResponse = await cache.match(fetchEvent.request);
+
     if (cachedResponse) {
-      // TODO: refresh at some point; now we can't update code :cowboy:
       return cachedResponse;
     }
-    return await fetch(fetchEvent.request);
-  }
-  fetchEvent.respondWith(retrieve());
+    console.error(`Cache miss: ${fetchEvent.request.url}`);
+
+    return await refetch(cache, fetchEvent);
+  };
+  fetchEvent.respondWith(retrieve().catch((cause) => {
+    throw new Error("Failed to retrieve " + fetchEvent.request.url, { cause });
+  }));
 });
 
-const staticAssetUrls = [
-  "",
-  "index.html",
-  "css/stylesheet.css",
-  "script/main.js",
-  "web-worker.js",
+async function refetch(cache: Cache, fetchEvent: FetchEvent): Promise<Response> {
+  const response = await fetch(fetchEvent.request);
+  await cache.put(fetchEvent.request, response);
+  return response;
+}
 
-  "android-chrome-192x192.png",
-  "android-chrome-512x512.png",
-  "apple-touch-icon.png",
-  "browserconfig.xml",
-  "favicon.ico",
-  "favicon-16x16.png",
-  "favicon-32x32.png",
-  "manifest.webmanifest",
-  "mstile-150x150.png",
-  "safari-pinned-tab.svg",
-];
+async function refresh() {
+  console.log("Fetching hashes");
+  await fetch(`${pathRoot}/hashes.json`).then(async res => await handleRefresh(await res.json()));
+}
+
+type Hashes = {
+  name: string,
+  hash: string,
+  children?: Hashes[],
+};
+
+async function handleRefresh(hashes: Hashes) {
+  const hashCache = await caches.open("hashcache");
+  const oldHashes: Hashes | undefined = await (
+    await hashCache.match(`${pathRoot}/hashes.json`)
+  )?.json();
+  const toRefetch: string[] = [];
+
+  function markChanged(node: Hashes, oldNode?: Hashes, prefix: string = ""): void {
+    const path = prefix + node.name;
+    if (node.hash !== oldNode?.hash) {
+      if (!node.children || node.children.length === 0) {
+        toRefetch.push(path);
+        console.log(`Refetching ${path}`);
+      } else {
+        for (const child of node.children) {
+          markChanged(
+            child,
+            oldNode?.children?.find(c => c.name === child.name),
+            path + "/",
+          );
+        }
+      }
+    }
+  }
+
+  markChanged(hashes, oldHashes, pathRoot);
+
+  const cache = await caches.open(cacheName);
+  await cache.addAll(toRefetch);
+  await hashCache.put(`${pathRoot}/hashes.json`, new Response(JSON.stringify(hashes)));
+}

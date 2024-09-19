@@ -1,12 +1,19 @@
 {
   "name": "basketfall",
   "version": "1.0.0",
+  "license": "MIT",
   "devDependencies": {
+    "@types/folder-hash": "^4.0.4",
+    "@types/node": "^22.5.5",
+    "folder-hash": "^4.0.4",
     "tsc-watch": "^6.2.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "undici-types": "^6.19.8"
   },
   "scripts": {
-    "dev": "tsc-watch --build"
+    "dev": "tsc-watch --build --onSuccess 'yarn hash'",
+    "build": "tsc --build && yarn hash",
+    "hash": "node build-tools/hash-files.js"
   },
   "type": "module"
 }

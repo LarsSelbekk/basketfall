@@ -4,12 +4,25 @@
     "target": "es2017",
     "sourceMap": true,
     "strict": true,
-  },
-  "references": [{
-    "path": "web-workers"
-  },
-    {
-      "path": "script"
+    "composite": true,
+    "paths": {
+      // Bug in types, see https://github.com/DefinitelyTyped/DefinitelyTyped/discussions/67406#discussioncomment-7866621
+      "undici-types": [
+        "./node_modules/undici-types/index.d.ts"
+      ],
     }
-  ]
+  },
+  "references": [
+    {
+      "path": "web-workers"
+    },
+    {
+      "path": "build-tools",
+    },
+    {
+      "path": "script",
+    }
+  ],
+  // Required to not double-compile the submodules
+  "include": []
 }
