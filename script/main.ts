@@ -541,7 +541,7 @@ await init();
 async function tryRegisterWebWorker(): Promise<void> {
   try {
     const serviceWorkerResult = await navigator.serviceWorker.register(
-      `../../service-worker.js`, { scope: `/`, type: "module" });
+      `${rootUrl}/service-worker.js`, { scope: `${rootUrl}/`, type: "module" });
     console.log(
       `Service worker ${serviceWorkerResult.installing ? "installing" : serviceWorkerResult.waiting
         ? "waiting"

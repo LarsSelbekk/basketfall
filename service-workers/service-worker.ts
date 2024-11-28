@@ -1,8 +1,6 @@
 refresh().then();
 
-// TODO: make hostable
-// const pathRoot = self.location.pathname.slice(0, self.location.pathname.lastIndexOf("/"));
-const pathRoot = "";
+const pathRoot = self.location.pathname.slice(0, self.location.pathname.lastIndexOf("/"));
 const cacheName = "v1";
 
 self.addEventListener("install", (event) => {
@@ -19,29 +17,40 @@ self.addEventListener("message", (ev: MessageEvent) => {
   }
 });
 
+function normalizeRequest(request: Request): Request {
+  return new Request(request, {
+    headers: {
+      ...request.headers,
+      range: undefined,
+    },
+  });
+}
+
 self.addEventListener('fetch', async (event) => {
 
   const fetchEvent = event as FetchEvent;
+  const normalizedRequest = normalizeRequest(fetchEvent.request);
 
   const retrieve = async () => {
     const cache = await caches.open(cacheName);
-    const cachedResponse = await cache.match(fetchEvent.request);
+    const cachedResponse = await cache.match(normalizedRequest);
 
     if (cachedResponse) {
       return cachedResponse;
     }
-    console.error(`Cache miss: ${fetchEvent.request.url}`);
+    console.error(`Cache miss: ${normalizedRequest.url}`);
 
     return await refetch(cache, fetchEvent);
   };
   fetchEvent.respondWith(retrieve().catch((cause) => {
-    throw new Error("Failed to retrieve " + fetchEvent.request.url, { cause });
+    throw new Error("Failed to retrieve " + normalizedRequest.url, { cause });
   }));
 });
 
 async function refetch(cache: Cache, fetchEvent: FetchEvent): Promise<Response> {
-  const response = await fetch(fetchEvent.request);
-  await cache.put(fetchEvent.request, response);
+  const normalizedRequest = normalizeRequest(fetchEvent.request);
+  const response = await fetch(normalizedRequest);
+  await cache.put(normalizedRequest, response);
   return response;
 }
 
@@ -64,7 +73,7 @@ async function handleRefresh(hashes: Hashes) {
   const toRefetch: string[] = [];
 
   function markChanged(node: Hashes, oldNode?: Hashes, prefix: string = ""): void {
-    const path = prefix + node.name;
+    const path = node.name === "." ? prefix : `${prefix}/${node.name}`;
     if (node.hash !== oldNode?.hash) {
       if (!node.children || node.children.length === 0) {
         toRefetch.push(path);
@@ -74,7 +83,7 @@ async function handleRefresh(hashes: Hashes) {
           markChanged(
             child,
             oldNode?.children?.find(c => c.name === child.name),
-            path + "/",
+            path,
           );
         }
       }
