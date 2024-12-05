@@ -1,11 +1,11 @@
-refresh().then();
-
 const pathRoot = self.location.pathname.slice(0, self.location.pathname.lastIndexOf("/"));
 const cacheName = "v1";
 
+refresh().then();
+
 self.addEventListener("install", (event) => {
   console.log("Installing...");
-  console.log("pathRoot: ", pathRoot);
+  console.log("pathRoot:", pathRoot);
   (
     event as ExtendableEvent
   ).waitUntil(refresh());
@@ -54,9 +54,21 @@ async function refetch(cache: Cache, fetchEvent: FetchEvent): Promise<Response> 
   return response;
 }
 
+var refreshLock = Promise.resolve();
+
 async function refresh() {
+  await refreshLock;
+  let releaseLock;
+  refreshLock = new Promise((resolve) => {
+    releaseLock = resolve;
+  });
+
   console.log("Fetching hashes");
-  await fetch(`${pathRoot}/hashes.json`).then(async res => await handleRefresh(await res.json()));
+  await fetch(`${pathRoot}/hashes.json`)
+    .then(async res => await handleRefresh(await res.json()))
+    .catch(() => console.warn("Failed to fetch hashes; operating in offline-mode"));
+
+  releaseLock!();
 }
 
 type Hashes = {
@@ -73,7 +85,8 @@ async function handleRefresh(hashes: Hashes) {
   const toRefetch: string[] = [];
 
   function markChanged(node: Hashes, oldNode?: Hashes, prefix: string = ""): void {
-    const path = node.name === "." ? prefix : `${prefix}/${node.name}`;
+    let path = stripIndexHtml(node.name === "." ? prefix : `${prefix}/${node.name}`);
+
     if (node.hash !== oldNode?.hash) {
       if (!node.children || node.children.length === 0) {
         toRefetch.push(path);
@@ -95,4 +108,12 @@ async function handleRefresh(hashes: Hashes) {
   const cache = await caches.open(cacheName);
   await cache.addAll(toRefetch);
   await hashCache.put(`${pathRoot}/hashes.json`, new Response(JSON.stringify(hashes)));
+}
+
+function stripIndexHtml(path: string): string {
+  if (path.endsWith("/index.html")) {
+    return path.substring(0, path.lastIndexOf("/") + 1);
+  }
+
+  return path;
 }
