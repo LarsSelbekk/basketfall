@@ -19,9 +19,17 @@ target/
 *.map
 *.d.ts
 *.tsbuildinfo
+.tsbuildinfo
 
 # Service worker hashes for caching
 /hashes.json
 
 # Docker secrets
 .env
+
+# Git
+.git
+.gitignore
+
+# Dev tools
+/psd

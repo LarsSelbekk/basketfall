@@ -1,0 +1,7 @@
+services:
+  nginx:
+    build:
+      target: release
+    container_name: basketfall
+    ports:
+      - "80:80"

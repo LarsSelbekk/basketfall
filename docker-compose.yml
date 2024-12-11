@@ -1,0 +1,8 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: basketfall-dev
+    ports:
+      - "80:80"
+    volumes:
+      - "./:/usr/share/nginx/html/"
