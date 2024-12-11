@@ -31,6 +31,8 @@ self.addEventListener('fetch', async (event) => {
   const fetchEvent = event as FetchEvent;
   const normalizedRequest = normalizeRequest(fetchEvent.request);
 
+  if (fetchEvent.request.url.startsWith("chrome-extension://")) return;
+
   const retrieve = async () => {
     const cache = await caches.open(cacheName);
     const cachedResponse = await cache.match(normalizedRequest);
