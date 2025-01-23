@@ -17,42 +17,30 @@ self.addEventListener("message", (ev: MessageEvent) => {
   }
 });
 
-function normalizeRequest(request: Request): Request {
-  return new Request(request, {
-    headers: {
-      ...request.headers,
-      range: undefined,
-    },
-  });
-}
-
 self.addEventListener('fetch', async (event) => {
 
   const fetchEvent = event as FetchEvent;
-  const normalizedRequest = normalizeRequest(fetchEvent.request);
-
   if (fetchEvent.request.url.startsWith("chrome-extension://")) return;
 
   const retrieve = async () => {
     const cache = await caches.open(cacheName);
-    const cachedResponse = await cache.match(normalizedRequest);
+    const cachedResponse = await cache.match(fetchEvent.request);
 
     if (cachedResponse) {
       return cachedResponse;
     }
-    console.error(`Cache miss: ${normalizedRequest.url}`);
+    console.error(`Cache miss: ${fetchEvent.request.url}`);
 
     return await refetch(cache, fetchEvent);
   };
   fetchEvent.respondWith(retrieve().catch((cause) => {
-    throw new Error("Failed to retrieve " + normalizedRequest.url, { cause });
+    throw new Error("Failed to retrieve " + fetchEvent.request.url, { cause });
   }));
 });
 
 async function refetch(cache: Cache, fetchEvent: FetchEvent): Promise<Response> {
-  const normalizedRequest = normalizeRequest(fetchEvent.request);
-  const response = await fetch(normalizedRequest);
-  await cache.put(normalizedRequest, response);
+  const response = await fetch(fetchEvent.request);
+  await cache.put(fetchEvent.request, response.clone());
   return response;
 }
 
