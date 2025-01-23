@@ -539,6 +539,10 @@ async function init(): Promise<void> {
 await init();
 
 async function tryRegisterWebWorker(): Promise<void> {
+  if (!navigator.serviceWorker) {
+    console.error("Browser does not support service workers");
+    return;
+  }
   try {
     const serviceWorkerResult = await navigator.serviceWorker.register(
       `${rootUrl}/service-worker.js`, { scope: `${rootUrl}/`, type: "module" });
