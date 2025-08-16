@@ -31,5 +31,8 @@ target/
 .git
 .gitignore
 
+# CI
+.github
+
 # Dev tools
 /psd
