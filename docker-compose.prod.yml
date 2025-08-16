@@ -3,9 +3,5 @@ services:
     build:
       target: release
     container_name: basketfall
-    networks:
-      - reverse-proxy
-
-networks:
-  reverse-proxy:
-    external: true
+    ports:
+      - "80:80"

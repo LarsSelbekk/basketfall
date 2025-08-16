@@ -5,6 +5,7 @@ refresh().then();
 
 self.addEventListener("install", (event) => {
   console.log("Installing...");
+  // TODO: Oops /basketfall/ is cached but not /basketfall, don't know if fixable. Try /basketfall
   console.log("pathRoot:", pathRoot);
   (
     event as ExtendableEvent
@@ -54,6 +55,8 @@ async function refresh() {
   });
 
   console.log("Fetching hashes");
+  // TODO: this blocks for a good while when the server responds but slowly. Use cache
+  //  immediately and postpone refresh until next load?
   await fetch(`${pathRoot}/hashes.json`)
     .then(async res => await handleRefresh(await res.json()))
     .catch(() => console.warn("Failed to fetch hashes; operating in offline-mode"));

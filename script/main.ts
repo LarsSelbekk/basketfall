@@ -220,6 +220,7 @@ let stage: GameStage;
 let leftOrRight: Direction = Direction.NONE;
 let leftDown: boolean = false;
 let rightDown: boolean = false;
+let tiltInput: number = 0;
 let ticker: number;
 let currentBackgroundIndex: number = 0;
 
@@ -247,9 +248,16 @@ class Player extends PhysicsObject implements IRenderable, ICenteredRotatableCom
       die();
     } else {
       this.clearAngularForces();
-      this.addTorque((
-        Math.random() - 0.5
-      ) * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE);
+      const tiltControl = true;
+      if (tiltControl) {
+        this.addTorque((
+          Math.random() - 0.5
+        ) * TILT_FLUCTUATION_FORCE_MAX + tiltInput * PLAYER_TILT_CONTROL_FORCE);
+      } else {
+        this.addTorque((
+          Math.random() - 0.5
+        ) * TILT_FLUCTUATION_FORCE_MAX + leftOrRight * PLAYER_TILT_CONTROL_FORCE);
+      }
       this.addTorque(-Math.sign(this.speedAngle) * this.speedAngle ** 2 * this.airResistanceAngle);
       this.computeTorque();
       this.computeAngularAcceleration();
@@ -521,7 +529,6 @@ tryningsVideo.loop = true;
 
 const images: HTMLImageElement[] = [playerImage, hoopImage, ballImage, basketImage];
 
-// TODO: make hostable
 const rootUrl = window.location.pathname.slice(0, window.location.pathname.lastIndexOf("/"));
 
 async function init(): Promise<void> {
@@ -628,6 +635,10 @@ function updateDirection(): void {
   }
 }
 
+function updateTiltDirection(): void {
+
+}
+
 function touch(xProportion: number, yProportion: number): void {
   if (xProportion < 1 / 4) {
     leftDown = true;
@@ -673,6 +684,12 @@ function run(): void {
       e.preventDefault();
     },
   );
+
+  const gyroscope = new Gyroscope({frequency: 60});
+  gyroscope.addEventListener("reading", e => {
+    tiltInput = gyroscope.z;
+  });
+  gyroscope.start();
 
   gameCanvas.addEventListener("touchstart", e => {
     const mainTouch = e.targetTouches[0];
@@ -967,6 +984,3 @@ function tick(): void {
     ball.tick();
   }
 }
-
-
-export {};
