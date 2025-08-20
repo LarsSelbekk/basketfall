@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: basketfall
+spec:
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: basketfall
+  template:
+    metadata:
+      labels:
+        app: basketfall
+    spec:
+      containers:
+        - image: ghcr.io/larsselbekk/basketfall
+          name: basketfall
+          ports:
+            - name: http
+              containerPort: 80
