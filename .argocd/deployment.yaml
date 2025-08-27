@@ -14,7 +14,7 @@ spec:
         app: basketfall
     spec:
       containers:
-        - image: ghcr.io/larsselbekk/basketfall
+        - image: ghcr.io/larsselbekk/basketfall:latest
           name: basketfall
           ports:
             - name: http
