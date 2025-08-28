@@ -4,5 +4,5 @@ resources:
   - deployment.yaml
   - service.yaml
 images:
-  - name: basketfall
+  - name: ghcr.io/larsselbekk/basketfall
     newTag: "latest"
