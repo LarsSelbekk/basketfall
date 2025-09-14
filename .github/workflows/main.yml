@@ -2,7 +2,7 @@ name: Build & push image for main
 
 on:
   push:
-    branches: ['main', 'master']
+    branches: ['main', 'master', 'argocd']
 
 env:
   REGISTRY: ghcr.io
@@ -38,6 +38,7 @@ jobs:
             type=ref,event=branch
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=argocd
 
       - name: Build and push Docker image
         id: push
