@@ -4,6 +4,9 @@
     "lib": [
       "esnext"
     ],
+    "types": [
+      "node"
+    ],
     "composite": true,
     "module": "nodenext",
     "moduleResolution": "nodenext",
