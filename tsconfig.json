@@ -4,13 +4,7 @@
     "target": "es2017",
     "sourceMap": true,
     "strict": true,
-    "composite": true,
-    "paths": {
-      // Bug in types, see https://github.com/DefinitelyTyped/DefinitelyTyped/discussions/67406#discussioncomment-7866621
-      "undici-types": [
-        "./node_modules/undici-types/index.d.ts"
-      ],
-    }
+    "composite": true
   },
   "references": [
     {
