@@ -1,4 +1,4 @@
-FROM node:23 AS install
+FROM node:26 AS install
 WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn
